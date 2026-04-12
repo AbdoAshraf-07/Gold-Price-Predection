@@ -1,0 +1,43 @@
+# 🪙 Gold Price Prediction Dataset & EDA
+
+## 📝 Overview
+[cite_start]This repository contains a comprehensive, production-ready dataset covering 25+ years of gold trading history (2000-2026)[cite: 6]. [cite_start]It is specifically engineered to lay a solid foundation for building advanced machine learning and deep learning forecasting models[cite: 8]. 
+
+[cite_start]The dataset goes beyond simple price action by integrating macroeconomic indicators and over 40 engineered technical features to capture momentum, trend, volatility, and mean-reversion signals[cite: 7, 29].
+
+## 📊 Dataset Characteristics
+* [cite_start]**Timeframe:** 2000 to April 12, 2026 [cite: 4]
+* [cite_start]**Total Instances:** 6,419 trading days [cite: 4, 9, 13]
+* [cite_start]**Total Features:** 69 features [cite: 10, 14]
+* [cite_start]**Target Variable:** Gold Futures (GC=F) [cite: 27]
+
+## 📂 Data Sources
+[cite_start]The dataset fuses data from two highly reliable sources[cite: 7]:
+1. [cite_start]**Yahoo Finance:** Daily market data for 19 tickers, including Silver (SI=F), Crude Oil WTI (CL=F), S&P 500, and the US Dollar Index (DXY)[cite: 25, 27].
+2. [cite_start]**FRED (Federal Reserve Economic Data):** 10 macro series, including the Consumer Price Index (CPI), Fed Funds Rate, and M2 Money Supply[cite: 25, 27]. 
+
+## ⚙️ Engineered Feature Categories
+[cite_start]To assist models in understanding complex market regimes, the dataset includes[cite: 29]:
+* [cite_start]**Moving Averages (10 Features):** MA7 through MA200, and EMA7 through EMA200[cite: 86, 87, 88].
+* [cite_start]**Momentum (5 Features):** RSI_14, MACD, MACD_Signal, MACD_Hist, Momentum_14d[cite: 95, 96, 97].
+* [cite_start]**Volatility (6 Features):** Bollinger Bands (Upper, Lower, Width, Pos) and Volatility (7d, 30d)[cite: 98, 99, 100, 101, 102, 103].
+* [cite_start]**Cross-Asset Ratios (2 Features):** Gold/Silver Ratio and Gold/Oil Ratio[cite: 104, 105].
+* [cite_start]**Calendar (4 Features):** DayOfWeek, Month, Quarter, and Year to capture observable seasonal physical demand[cite: 106, 107, 109, 151, 152].
+
+## ⚠️ Preprocessing & Data Pipeline Notes
+[cite_start]If you are integrating this dataset into a machine learning pipeline, please observe the following critical steps[cite: 199, 200]:
+
+* [cite_start]**Data Leakage Warning:** The `Gold_ETF_GLD` column perfectly mirrors the target variable (Correlation = +1.000)[cite: 143]. [cite_start]It **must be dropped** from the feature set prior to training[cite: 200, 205]. [cite_start]The `Lag_1d` feature should also be dropped as a standalone input[cite: 200].
+* [cite_start]**Handling Warm-up Periods (NaNs):** Technical indicators like the MA200 require a 200-day warm-up window[cite: 197, 198]. [cite_start]Ensure you **drop the first 200 rows** of the training set before feeding data to your model[cite: 198, 200].
+* [cite_start]**Time Alignment:** FRED macroeconomic series (released monthly/quarterly) have already been forward-filled to align with the daily trading calendar[cite: 198, 200]. [cite_start]Non-trading days (weekends and holidays) have been successfully dropped[cite: 198, 200].
+* [cite_start]**Scaling:** Features should be scaled using `StandardScaler` or `MinMaxScaler` prior to modeling[cite: 200]. [cite_start]Always use a **time-based split** (never random shuffle) for Train/Test sets[cite: 200].
+
+## 🧠 Modeling Recommendations
+[cite_start]Based on the Exploratory Data Analysis (EDA), the following baseline models are recommended[cite: 206]:
+* [cite_start]**XGBoost:** Excellent for handling tabular data across all 69 features to extract feature importance and establish a strong baseline[cite: 207, 208, 209, 228].
+* **LSTM:** Highly recommended to capture the massive autocorrelation in the dataset. [cite_start]Use a sliding window of 30-60 days to capture temporal sequence dependencies[cite: 205, 211, 212, 213].
+* [cite_start]**Ensemble Architecture:** For peak accuracy, research shows that combining XGBoost and LSTM predictions using a meta-learner outperforms single-model approaches[cite: 221, 222, 223, 224, 226].
+
+---
+### 👤 Author
+**Abdelrahman Farag Mohamed**
