@@ -1,0 +1,268 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>{{ model.name }} · Input · GoldCast</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--g1:#C9A84C;--g2:#E8C96A;--dark:#08080A;--d2:#0F0F14;--d3:#16161E;--d4:#1E1E28;--d5:#262632;--border:rgba(201,168,76,0.2);--border2:rgba(201,168,76,0.07);--text:#F0EDE6;--muted:#6B6578;--muted2:#9A9198}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);min-height:100vh}
+nav{position:sticky;top:0;z-index:100;padding:16px 40px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border2);backdrop-filter:blur(20px);background:rgba(8,8,10,0.85)}
+.nav-left{display:flex;align-items:center;gap:16px}
+.nav-logo{display:flex;align-items:center;gap:8px;text-decoration:none}
+.nav-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--g1),var(--g2));border-radius:5px;display:grid;place-items:center;font-family:'Playfair Display',serif;font-weight:900;font-size:11px;color:#08080A}
+.nav-name{font-family:'Playfair Display',serif;font-size:16px;font-weight:700}
+.nav-sep{color:var(--muted);font-size:12px}
+.nav-model{font-size:13px;color:var(--muted2)}
+.back-btn{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--g1);text-decoration:none;border:1px solid var(--border);padding:6px 14px;border-radius:6px;transition:all .2s}
+.back-btn:hover{background:rgba(201,168,76,0.1)}
+
+/* Hero bar */
+.model-hero{padding:32px 40px;background:linear-gradient(135deg,var(--d2),var(--dark));border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:32px;flex-wrap:wrap}
+.model-icon-big{width:64px;height:64px;border-radius:12px;background:rgba(201,168,76,0.1);border:1px solid var(--border);display:grid;place-items:center;font-size:28px;flex-shrink:0}
+.model-hero-info{flex:1}
+.model-rank-badge{display:inline-flex;align-items:center;gap:6px;font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--g1);margin-bottom:8px}
+.model-rank-badge::before{content:'';width:16px;height:1px;background:var(--g1)}
+.model-hero-name{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;margin-bottom:4px}
+.model-hero-pipe{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:0.5px}
+.model-hero-metrics{display:flex;gap:24px;flex-wrap:wrap}
+.hmetric{text-align:center}
+.hmetric-val{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--g2)}
+.hmetric-label{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+
+/* Main layout */
+main{max-width:1100px;margin:0 auto;padding:40px}
+.form-header{margin-bottom:32px}
+.form-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:8px}
+.form-subtitle{font-size:13px;color:var(--muted2)}
+
+/* Category sections */
+.category{margin-bottom:36px}
+.cat-label{display:flex;align-items:center;gap:12px;font-family:'Space Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--g1);text-transform:uppercase;margin-bottom:16px}
+.cat-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+.cat-count{background:rgba(201,168,76,0.15);color:var(--g1);font-size:9px;padding:2px 6px;border-radius:3px}
+
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.feat-card{background:var(--d2);border:1px solid var(--border2);border-radius:10px;padding:14px 16px;transition:border-color .2s}
+.feat-card:hover{border-color:rgba(201,168,76,0.3)}
+.feat-card:focus-within{border-color:var(--g1)}
+.feat-label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--g1);text-transform:uppercase;margin-bottom:2px}
+.feat-desc{font-size:10px;color:var(--muted);margin-bottom:8px;line-height:1.4}
+.feat-input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--d5);color:var(--text);font-family:'Space Mono',monospace;font-size:13px;padding:4px 0;outline:none;transition:border-color .2s}
+.feat-input:focus{border-bottom-color:var(--g1)}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+input[type=number]{-moz-appearance:textfield}
+.feat-card.is-derived{border-color:rgba(100,160,240,0.18)}
+.feat-card.is-derived .feat-label::after{content:' AUTO';font-size:7px;color:rgba(100,180,255,0.6);letter-spacing:1px;margin-left:4px}
+.feat-card.is-derived .feat-input{border-bottom-color:rgba(100,160,240,0.3)}
+.feat-card.is-derived.user-overridden{border-color:rgba(201,168,76,0.25)}
+.feat-card.is-derived.user-overridden .feat-label::after{content:' OVERRIDE';color:var(--g1)}
+
+/* Sticky submit bar */
+.submit-bar{position:sticky;bottom:0;background:rgba(8,8,10,0.95);backdrop-filter:blur(20px);border-top:1px solid var(--border2);padding:16px 40px;display:flex;align-items:center;justify-content:space-between;gap:16px;z-index:50;flex-wrap:wrap}
+.submit-info{font-size:12px;color:var(--muted2)}
+.submit-info strong{color:var(--g2)}
+.btn-group{display:flex;gap:10px}
+.btn-predict{font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;padding:12px 28px;background:linear-gradient(135deg,var(--g1),var(--g2));color:var(--dark);border:none;border-radius:8px;cursor:pointer;transition:all .2s;letter-spacing:0.3px}
+.btn-predict:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 8px 24px rgba(201,168,76,0.3)}
+.btn-reset{font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;padding:12px 20px;background:transparent;color:var(--muted2);border:1px solid var(--border2);border-radius:8px;cursor:pointer;transition:all .2s}
+.btn-reset:hover{border-color:var(--border);color:var(--text)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <a href="/" class="nav-logo">
+      <div class="nav-icon">Au</div>
+      <div class="nav-name">GoldCast</div>
+    </a>
+    <span class="nav-sep">/</span>
+    <span class="nav-model">{{ model.name }}</span>
+  </div>
+  <a href="/" class="back-btn">← All Models</a>
+</nav>
+
+<div class="model-hero">
+  <div class="model-icon-big">{{ model.icon }}</div>
+  <div class="model-hero-info">
+    <div class="model-rank-badge">RANK #{{ model.rank }} · {{ model.badge }}</div>
+    <div class="model-hero-name">{{ model.name }}</div>
+    <div class="model-hero-pipe">{{ model.pipeline }}</div>
+  </div>
+  <div class="model-hero-metrics">
+    <div class="hmetric"><div class="hmetric-val">{{ "%.4f"|format(model.r2) }}</div><div class="hmetric-label">R²</div></div>
+    <div class="hmetric"><div class="hmetric-val">${{ model.rmse }}</div><div class="hmetric-label">RMSE</div></div>
+    <div class="hmetric"><div class="hmetric-val">${{ model.mae }}</div><div class="hmetric-label">MAE</div></div>
+    <div class="hmetric"><div class="hmetric-val">{{ model.features }}</div><div class="hmetric-label">Features</div></div>
+  </div>
+</div>
+
+<main>
+  <div class="form-header">
+    <div class="form-title">Enter Market Data</div>
+    <div class="form-subtitle">Fill in the values below — defaults are set to typical market conditions. Adjust to reflect current data for best results.</div>
+  </div>
+
+  <form action="/predict/{{ model_name }}" method="POST"><input type="hidden" name="_csrf_token" value="{{ csrf_token }}"/>
+
+    {% set categories = [
+      ("Market Prices", ["Gold_Price","Silver","Platinum","Copper"]),
+      ("Equity & Currency Markets", ["SP500","DXY","JPY_USD","GBP_USD","CNY_USD"]),
+      ("Fixed Income & Yields", ["US_2Y_Yield","TIP_ETF","Real_Rate_10Y","Treasury_Spread"]),
+      ("Macroeconomic Indicators", ["PPI","Unemployment","GDP_Growth","Industrial_Prod","Consumer_Conf"]),
+      ("Price Returns", ["Return_7d","Return_14d","Return_30d"]),
+      ("Technical Indicators", ["MACD","MACD_Hist","Volatility_7d","Volatility_30d","Momentum_14d"]),
+      ("Ratios & Engineered", ["Gold_Silver_Ratio","Gold_Oil_Ratio","Gold_VIX_interaction","Rolling_std_7","Price_diff","Month_cos"])
+    ] %}
+
+    {% for cat_name, cat_features in categories %}
+    <div class="category">
+      <div class="cat-label">{{ cat_name }} <span class="cat-count">{{ cat_features|length }}</span></div>
+      <div class="feat-grid">
+        {% for f in cat_features %}
+        <div class="feat-card">
+          <div class="feat-label">{{ f }}</div>
+          <div class="feat-desc">{{ descriptions.get(f, '') }}</div>
+          <input class="feat-input" type="number" step="any" name="{{ f }}" value="{{ defaults.get(f, 0) }}"/>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+
+    <div class="submit-bar">
+      <div class="submit-info">Model: <strong>{{ model.name }}</strong> · {{ features|length }} features · Pipeline: {{ model.pipeline }}</div>
+      <div class="btn-group">
+        <button type="reset" class="btn-reset">Reset</button>
+        <button type="submit" formaction="/compare_all" class="btn-reset" style="color:var(--g1);border-color:var(--border)">⊕ Compare All 5</button>
+        <button type="submit" class="btn-predict">⬡ Predict with {{ model.name }}</button>
+      </div>
+    </div>
+  </form>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// GoldCast Auto-Derive Engine
+// Derived fields are computed from Gold_Price + context whenever a source
+// field changes.  The user can still override any field manually.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Approximate constants for derivation (not input by user)
+const OIL_APPROX = 75.0;   // WTI crude $/bbl
+const VIX_APPROX = 16.8;   // CBOE VIX
+
+// Derived field names — these are auto-computed unless user overrides them
+const DERIVED_FIELDS = [
+  'Gold_Silver_Ratio', 'Gold_Oil_Ratio', 'Gold_VIX_interaction',
+  'Return_7d', 'Return_14d', 'Return_30d',
+  'Momentum_14d', 'Price_diff', 'Rolling_std_7',
+  'MACD', 'MACD_Hist'
+];
+
+// Track which fields the user has manually overridden
+const userModified = new Set();
+document.querySelectorAll('.feat-input').forEach(el => {
+  el.addEventListener('change', function () {
+    // Only mark as user-modified if the field is a derived one
+    if (DERIVED_FIELDS.includes(this.name)) {
+      userModified.add(this.name);
+    }
+  });
+});
+
+function getVal(name) {
+  const el = document.querySelector(`[name="${name}"]`);
+  return el ? (parseFloat(el.value) || 0) : 0;
+}
+
+function setDerived(name, val, decimals = 4) {
+  if (userModified.has(name)) return;  // respect manual override
+  const el = document.querySelector(`[name="${name}"]`);
+  if (el) el.value = val.toFixed(decimals);
+}
+
+function recalcDerived() {
+  const gold   = getVal('Gold_Price');
+  const silver = getVal('Silver') || 32.8;
+
+  if (gold <= 0) return;
+
+  // ── Ratio features ───────────────────────────────────────────────────────
+  setDerived('Gold_Silver_Ratio',    gold / silver,          4);
+  setDerived('Gold_Oil_Ratio',       gold / OIL_APPROX,      4);
+  setDerived('Gold_VIX_interaction', gold * VIX_APPROX,      2);
+
+  // ── Return features (% change from N days ago) ───────────────────────────
+  // We estimate previous prices from current gold using the return defaults
+  // Example: if Return_7d default = 0.016, then price 7d ago ≈ gold / 1.016
+  // The user can override these directly if they have actual historical data
+  const r7d  = gold / 1.016;   // ~price 7 days ago
+  const r14d = gold / 1.027;   // ~price 14 days ago
+  const r30d = gold / 1.048;   // ~price 30 days ago
+
+  setDerived('Return_7d',    (gold / r7d  - 1),  6);
+  setDerived('Return_14d',   (gold / r14d - 1),  6);
+  setDerived('Return_30d',   (gold / r30d - 1),  6);
+
+  // ── Momentum (price change over N days, absolute) ────────────────────────
+  setDerived('Momentum_14d', gold - r14d,          2);
+
+  // ── Price_diff (change from yesterday) ──────────────────────────────────
+  // Estimate: ~0.3% daily move
+  const prev1d = gold / 1.003;
+  setDerived('Price_diff', gold - prev1d,          2);
+
+  // ── Rolling std (7-day price std dev estimate) ────────────────────────────
+  // Estimate from Volatility_7d (annualised daily vol)
+  const vol7d = getVal('Volatility_7d') || 0.0082;
+  setDerived('Rolling_std_7', gold * vol7d * Math.sqrt(7), 2);
+
+  // ── MACD (12-day EMA − 26-day EMA, simplified) ────────────────────────────
+  // At slow uptrend: EMA12 ≈ gold * 0.9996, EMA26 ≈ gold * 0.9974
+  const ema12 = gold * 0.9996;
+  const ema26 = gold * 0.9974;
+  const macd  = ema12 - ema26;
+  setDerived('MACD',      macd,          2);
+  setDerived('MACD_Hist', macd * 0.35,   2);
+}
+
+// ── Listen for changes on trigger fields ────────────────────────────────────
+const TRIGGER_FIELDS = ['Gold_Price', 'Silver', 'Volatility_7d'];
+TRIGGER_FIELDS.forEach(name => {
+  const el = document.querySelector(`[name="${name}"]`);
+  if (el) el.addEventListener('input', recalcDerived);
+});
+
+// ── Reset button clears user overrides and re-derives ────────────────────────
+document.querySelector('[type="reset"]')?.addEventListener('click', () => {
+  setTimeout(() => {
+    userModified.clear();
+    recalcDerived();
+  }, 10);
+});
+
+// ── Mark derived field cards visually ───────────────────────────────────────
+DERIVED_FIELDS.forEach(name => {
+  const el = document.querySelector(`[name="${name}"]`);
+  if (el) {
+    const card = el.closest('.feat-card');
+    if (card) {
+      card.classList.add('is-derived');
+      // Update visual when user overrides
+      el.addEventListener('change', () => {
+        card.classList.add('user-overridden');
+      });
+    }
+  }
+});
+
+// ── Run on page load ─────────────────────────────────────────────────────────
+recalcDerived();
+</script>
+</main>
+
+</body>
+</html>

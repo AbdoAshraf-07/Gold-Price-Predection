@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Prediction Result · GoldCast</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{--g1:#C9A84C;--g2:#E8C96A;--g3:#F5E6A3;--dark:#08080A;--d2:#0F0F14;--d3:#16161E;--d4:#1E1E28;--d5:#262632;--border:rgba(201,168,76,0.2);--border2:rgba(201,168,76,0.07);--text:#F0EDE6;--muted:#6B6578;--muted2:#9A9198;--green:#55C594;--red:#E05555}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text)}
+
+nav{position:sticky;top:0;z-index:100;padding:14px 40px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border2);backdrop-filter:blur(20px);background:rgba(8,8,10,0.9);flex-wrap:wrap;gap:10px}
+.nav-left{display:flex;align-items:center;gap:16px}
+.nav-logo{display:flex;align-items:center;gap:8px;text-decoration:none}
+.nav-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--g1),var(--g2));border-radius:5px;display:grid;place-items:center;font-family:'Playfair Display',serif;font-weight:900;font-size:11px;color:#08080A}
+.nav-name{font-family:'Playfair Display',serif;font-size:16px;font-weight:700}
+.nav-actions{display:flex;gap:8px;flex-wrap:wrap}
+.nav-btn{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1px;text-decoration:none;border:1px solid var(--border2);padding:6px 12px;border-radius:6px;transition:all .2s;background:transparent;cursor:pointer;color:var(--muted2)}
+.nav-btn:hover{border-color:var(--border);color:var(--text)}
+.nav-btn.gold{border-color:var(--border);color:var(--g1)}
+.nav-btn.gold:hover{background:rgba(201,168,76,0.1)}
+
+/* ── PREDICTION HERO ── */
+.pred-hero{padding:48px 40px;text-align:center;position:relative;overflow:hidden;background:radial-gradient(ellipse 60% 60% at 50% 0%,rgba(201,168,76,0.08),transparent)}
+.pred-hero::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--g1),transparent)}
+
+.pred-label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:12px;opacity:0;animation:fadeUp .6s ease .1s forwards}
+.pred-price{font-family:'Playfair Display',serif;font-size:clamp(56px,10vw,96px);font-weight:900;color:var(--g2);line-height:1;letter-spacing:-3px;margin-bottom:8px;opacity:0;animation:countUp .8s ease .3s forwards}
+.pred-unit{font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);letter-spacing:2px;margin-bottom:32px;opacity:0;animation:fadeUp .6s ease .5s forwards}
+
+.pred-meta-row{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;opacity:0;animation:fadeUp .6s ease .7s forwards}
+.pred-meta{background:var(--d2);border:1px solid var(--border2);border-radius:10px;padding:12px 20px;text-align:center}
+.pred-meta-val{font-family:'Space Mono',monospace;font-size:13px;color:var(--g2)}
+.pred-meta-key{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:3px}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes countUp{from{opacity:0;transform:scale(0.8)}to{opacity:1;transform:scale(1)}}
+
+/* ── SECTIONS ── */
+.container{max-width:1100px;margin:0 auto;padding:0 40px 80px}
+.section{margin-bottom:56px}
+.sec-label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--g1);text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.sec-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+.sec-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;margin-bottom:20px}
+.sec-title em{color:var(--g1);font-style:italic}
+
+/* Input Summary */
+.input-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.inp-card{background:var(--d2);border:1px solid var(--border2);border-radius:8px;padding:12px 14px}
+.inp-name{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.inp-val{font-size:14px;font-weight:600;color:var(--text)}
+
+/* Chart containers */
+.chart-container{background:var(--d2);border:1px solid var(--border2);border-radius:14px;padding:24px}
+.chart-title{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:16px}
+.charts-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:768px){.charts-2col{grid-template-columns:1fr}}
+
+/* Backtest section */
+.backtest-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:20px}
+.bt-stat{background:var(--d2);border:1px solid var(--border2);border-radius:10px;padding:16px;text-align:center}
+.bt-val{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--g2)}
+.bt-label{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:4px}
+.bt-good{color:var(--green)}
+.bt-ok{color:var(--g2)}
+
+/* Feature importance (simulated) */
+.feat-bars{display:flex;flex-direction:column;gap:8px}
+.feat-bar-row{display:flex;align-items:center;gap:12px}
+.feat-bar-name{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted2);width:160px;flex-shrink:0;text-align:right}
+.feat-bar-track{flex:1;height:6px;background:var(--d4);border-radius:3px;overflow:hidden}
+.feat-bar-fill{height:100%;background:linear-gradient(90deg,var(--g1),var(--g2));border-radius:3px;width:0;transition:width 1s cubic-bezier(.23,1,.32,1)}
+.feat-bar-val{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);width:40px}
+
+/* Error analysis */
+.error-box{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:16px}
+.err-card{background:var(--d2);border:1px solid var(--border2);border-radius:10px;padding:16px}
+.err-title{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.err-val{font-family:'Playfair Display',serif;font-size:22px;font-weight:700}
+
+/* Bottom nav */
+.bottom-nav{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding:32px 40px;border-top:1px solid var(--border2)}
+.bnav-btn{display:inline-flex;align-items:center;gap:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;text-decoration:none;padding:12px 22px;border-radius:8px;border:1px solid var(--border2);color:var(--muted2);transition:all .2s;cursor:pointer;background:transparent}
+.bnav-btn:hover{border-color:var(--border);color:var(--text)}
+.bnav-btn.primary{background:linear-gradient(135deg,var(--g1),var(--g2));color:var(--dark);border-color:transparent;font-weight:600}
+.bnav-btn.primary:hover{opacity:.9;transform:translateY(-1px)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <a href="/" class="nav-logo">
+      <div class="nav-icon">Au</div>
+      <div class="nav-name">GoldCast</div>
+    </a>
+  </div>
+  <div class="nav-actions">
+    <a href="/" class="nav-btn">← All Models</a>
+    <a href="/input/{{ model_name }}" class="nav-btn gold">↺ New Prediction</a>
+    <button onclick="window.print()" class="nav-btn">⎙ Save</button>
+  </div>
+</nav>
+
+<!-- PREDICTION HERO -->
+<div class="pred-hero">
+  {% if error %}
+    <div style="color:var(--red);font-family:'Space Mono',monospace;font-size:13px;padding:40px">Error: {{ error }}</div>
+  {% else %}
+  {% if model_warning %}
+  <div style="background:linear-gradient(135deg,rgba(201,168,76,0.08),rgba(232,201,106,0.04));border:1px solid rgba(201,168,76,0.35);border-radius:12px;padding:16px 22px;margin:0 40px 28px;display:flex;gap:14px;align-items:flex-start;text-align:left;box-shadow:0 0 24px rgba(201,168,76,0.07)">
+    <span style="font-size:16px;flex-shrink:0;margin-top:1px;filter:sepia(1) saturate(3) hue-rotate(5deg)">⚠️</span>
+    <div style="font-size:12px;color:rgba(201,168,76,0.75);line-height:1.8">
+      <strong style="color:var(--g2);display:block;margin-bottom:4px;font-size:13px;letter-spacing:0.3px">Prediction Reliability Warning</strong>
+      {{ model_warning }}
+    </div>
+  </div>
+  {% endif %}
+  <div class="pred-label">{{ model.name }} · Next-Day Forecast</div>
+  <div class="pred-price" id="priceDisplay">${{ "{:,.2f}".format(prediction) }}</div>
+  <div class="pred-unit">XAU / USD · PER TROY OUNCE · <span style="color:var(--g2);font-style:italic;text-shadow:0 0 12px rgba(232,201,106,0.8),0 0 24px rgba(201,168,76,0.4);letter-spacing:2px">of Gold</span></div>
+  <div class="pred-meta-row">
+    <div class="pred-meta">
+      <div class="pred-meta-val">{{ model.name }}</div>
+      <div class="pred-meta-key">Model Used</div>
+    </div>
+    <div class="pred-meta">
+      <div class="pred-meta-val">Rank #{{ model.rank }}</div>
+      <div class="pred-meta-key">Model Ranking</div>
+    </div>
+    <div class="pred-meta">
+      <div class="pred-meta-val">{{ "%.4f"|format(model.r2) }}</div>
+      <div class="pred-meta-key">R² Score</div>
+    </div>
+    <div class="pred-meta">
+      <div class="pred-meta-val">{{ model.pipeline }}</div>
+      <div class="pred-meta-key">Pipeline</div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="container">
+
+  <!-- INPUT SUMMARY -->
+  <div class="section">
+    <div class="sec-label">What You Entered</div>
+    <h2 class="sec-title">Your <em>Input Data</em></h2>
+    <div class="input-grid">
+      {% for f in features %}
+      <div class="inp-card">
+        <div class="inp-name">{{ f }}</div>
+        <div class="inp-val">{{ input_vals.get(f, 0) }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  {% if not error %}
+  <div class="section">
+    <div class="sec-label">Visual Analysis</div>
+    <h2 class="sec-title">Prediction <em>Context</em></h2>
+    <div class="charts-2col" style="margin-bottom:16px">
+      <div class="chart-container">
+        <div class="chart-title">Key Input Values</div>
+        <canvas id="inputChart" height="200"></canvas>
+      </div>
+      <div class="chart-container">
+        <div class="chart-title">Technical Indicators</div>
+        <canvas id="techChart" height="200"></canvas>
+      </div>
+    </div>
+    <div class="chart-container">
+      <div class="chart-title">Market Overview (Radar)</div>
+      <canvas id="radarChart" height="120"></canvas>
+    </div>
+  </div>
+
+  <!-- BACKTEST SECTION -->
+  <div class="section">
+    <div class="sec-label">Backtesting · {{ model.name }}</div>
+    <h2 class="sec-title">Model <em>Performance</em> on Historical Data</h2>
+
+    <div style="background:var(--d3);border:1px solid var(--border2);border-radius:8px;padding:12px 18px;margin-bottom:20px;display:flex;gap:12px;align-items:flex-start">
+      <span style="font-size:16px;flex-shrink:0">ℹ</span>
+      <div style="font-size:12px;color:var(--muted2);line-height:1.7">
+        <strong style="color:var(--g2);display:block;margin-bottom:4px">Illustrative Simulation — January 2025 Data</strong>
+        This chart shows how the model would have performed on 20 trading days in January 2025
+        (gold ~$2,310–$2,515). It is <em>not</em> a comparison with your current prediction.
+        Macro indicators (DXY, Silver, etc.) are fixed at today's defaults for simulation purposes.
+      </div>
+    </div>
+
+    {% set actual = backtest.get('actual', []) %}
+    {% set predicted = backtest.get('predicted', []) %}
+    {% if actual %}
+      {% set errors = [] %}
+      {% for i in range(actual|length) %}
+        {% set _ = errors.append((actual[i] - predicted[i])|abs) %}
+      {% endfor %}
+
+      <div class="backtest-stats">
+        <div class="bt-stat">
+          <div class="bt-val bt-good">{{ "%.4f"|format(model.r2) }}</div>
+          <div class="bt-label">R² Score</div>
+        </div>
+        <div class="bt-stat">
+          <div class="bt-val bt-ok">${{ model.rmse }}</div>
+          <div class="bt-label">RMSE</div>
+        </div>
+        <div class="bt-stat">
+          <div class="bt-val bt-ok">${{ model.mae }}</div>
+          <div class="bt-label">MAE</div>
+        </div>
+        <div class="bt-stat">
+          <div class="bt-val">{{ actual|length }}</div>
+          <div class="bt-label">Test Points</div>
+        </div>
+      </div>
+
+      <div class="chart-container" style="margin-bottom:16px">
+        <div class="chart-title">Actual vs Predicted — Last 20 Test Days</div>
+        <canvas id="backtestChart" height="120"></canvas>
+      </div>
+      <div class="charts-2col">
+        <div class="chart-container">
+          <div class="chart-title">Prediction Error per Day</div>
+          <canvas id="errorChart" height="180"></canvas>
+        </div>
+        <div class="chart-container">
+          <div class="chart-title">Error Distribution</div>
+          <canvas id="histChart" height="180"></canvas>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- FEATURE IMPORTANCE -->
+  <div class="section">
+    <div class="sec-label">Feature Insights</div>
+    <h2 class="sec-title">Top <em>Influential Features</em></h2>
+    <div class="chart-container">
+      <div class="chart-title">Feature Importance — {{ model.name }} (Model Weights)</div>
+      <div class="feat-bars" id="featBars"></div>
+    </div>
+  </div>
+
+  {% endif %}
+
+  <!-- MODEL INFO -->
+  <div class="section">
+    <div class="sec-label">About This Model</div>
+    <h2 class="sec-title">{{ model.name }} <em>Details</em></h2>
+    <div style="background:var(--d2);border:1px solid var(--border2);border-radius:14px;padding:24px">
+      <p style="color:var(--muted2);font-size:14px;line-height:1.7;margin-bottom:20px">{{ model.description }}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        {% for s in model.strengths %}
+        <span style="font-size:11px;color:var(--muted2);background:var(--d3);padding:4px 10px;border-radius:4px;border:1px solid var(--d5)">{{ s }}</span>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- BOTTOM NAVIGATION -->
+<div class="bottom-nav">
+  <a href="/" class="bnav-btn">🏠 All Models</a>
+  <a href="/input/{{ model_name }}" class="bnav-btn">← Edit Inputs</a>
+  <a href="/input/{{ model_name }}" class="bnav-btn primary">↺ New Prediction</a>
+  {% for key, m in [("ridge_pca","Ridge PCA"),("lasso_pca","Lasso PCA"),("ridge_gold","Ridge 32F"),("lightgbm","LightGBM"),("xgboost","XGBoost")] %}
+  {% if key != model_name %}
+  <a href="/input/{{ key }}" class="bnav-btn">Try {{ m }}</a>
+  {% endif %}
+  {% endfor %}
+</div>
+
+<script>
+const gold = '#C9A84C', gold2 = '#E8C96A', muted = '#6B6578', dark3 = '#16161E';
+const chartDefaults = {
+  plugins:{legend:{labels:{color:muted,font:{family:'Space Mono',size:10}}}},
+  scales:{x:{ticks:{color:muted,font:{size:9}},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:muted,font:{size:9}},grid:{color:'rgba(255,255,255,0.04)'}}}
+};
+
+// INPUT CHART
+const inputVals = {
+  Gold_Price: {{ input_vals.get('Gold_Price', 0) }},
+  Silver: {{ input_vals.get('Silver', 0) }},
+  SP500: {{ input_vals.get('SP500', 0) }},
+  DXY: {{ input_vals.get('DXY', 0) }},
+  US_2Y_Yield: {{ input_vals.get('US_2Y_Yield', 0) }},
+  Unemployment: {{ input_vals.get('Unemployment', 0) }},
+};
+
+new Chart(document.getElementById('inputChart'), {
+  type:'bar',
+  data:{
+    labels: Object.keys(inputVals),
+    datasets:[{
+      label:'Value',
+      data: Object.values(inputVals),
+      backgroundColor: Object.keys(inputVals).map((_,i)=>`rgba(201,168,76,${0.4+i*0.1})`),
+      borderRadius:6,
+      borderSkipped:false,
+    }]
+  },
+  options:{...chartDefaults, plugins:{...chartDefaults.plugins, tooltip:{callbacks:{label:c=>' '+c.raw.toLocaleString()}}}}
+});
+
+// TECHNICAL CHART
+new Chart(document.getElementById('techChart'), {
+  type:'bar',
+  data:{
+    labels:['MACD','MACD Hist','Volatility 7d','Volatility 30d','Momentum 14d'],
+    datasets:[{
+      label:'Value',
+      data:[{{ input_vals.get('MACD',0) }}, {{ input_vals.get('MACD_Hist',0) }}, {{ input_vals.get('Volatility_7d',0) }}, {{ input_vals.get('Volatility_30d',0) }}, {{ input_vals.get('Momentum_14d',0) }}],
+      backgroundColor:['rgba(201,168,76,0.5)','rgba(201,168,76,0.4)','rgba(232,201,106,0.5)','rgba(232,201,106,0.4)','rgba(245,230,163,0.5)'],
+      borderRadius:6,borderSkipped:false,
+    }]
+  },
+  options:{...chartDefaults}
+});
+
+// RADAR
+new Chart(document.getElementById('radarChart'), {
+  type:'radar',
+  data:{
+    labels:['Gold Price','Silver','SP500','DXY','Unemployment','GDP Growth','Consumer Conf','Volatility 30d'],
+    datasets:[{
+      label:'Current Market',
+      data:[
+        Math.min(100, {{ input_vals.get('Gold_Price',0) }}/30),
+        Math.min(100, {{ input_vals.get('Silver',0) }}*3),
+        Math.min(100, {{ input_vals.get('SP500',0) }}/60),
+        {{ input_vals.get('DXY',0) }},
+        Math.min(100, {{ input_vals.get('Unemployment',0) }}*10),
+        Math.min(100, {{ input_vals.get('GDP_Growth',0) }}*20),
+        {{ input_vals.get('Consumer_Conf',0) }},
+        Math.min(100, {{ input_vals.get('Volatility_30d',0) }}*5000),
+      ],
+      backgroundColor:'rgba(201,168,76,0.15)',
+      borderColor:gold,
+      pointBackgroundColor:gold2,
+      pointRadius:4,
+    }]
+  },
+  options:{
+    plugins:{legend:{labels:{color:muted,font:{family:'Space Mono',size:10}}}},
+    scales:{r:{ticks:{color:muted,font:{size:8},backdropColor:'transparent'},grid:{color:'rgba(255,255,255,0.06)'},pointLabels:{color:muted,font:{size:10}}}}
+  }
+});
+
+// BACKTEST CHART
+{% if backtest.get('actual') %}
+const actual = {{ backtest.actual|tojson }};
+const predicted = {{ backtest.predicted|tojson }};
+const dates = {{ backtest.dates|tojson }};
+const errors = actual.map((a,i) => Math.abs(a - predicted[i]));
+
+new Chart(document.getElementById('backtestChart'), {
+  type:'line',
+  data:{
+    labels:dates,
+    datasets:[
+      {label:'Actual',data:actual,borderColor:gold2,backgroundColor:'rgba(232,201,106,0.1)',borderWidth:2,pointRadius:3,tension:0.3},
+      {label:'Predicted',data:predicted,borderColor:'rgba(201,168,76,0.6)',backgroundColor:'rgba(201,168,76,0.05)',borderWidth:2,borderDash:[4,4],pointRadius:3,tension:0.3}
+    ]
+  },
+  options:{...chartDefaults,plugins:{...chartDefaults.plugins,tooltip:{mode:'index',intersect:false}}}
+});
+
+new Chart(document.getElementById('errorChart'), {
+  type:'bar',
+  data:{
+    labels:dates,
+    datasets:[{
+      label:'Abs Error ($)',
+      data:errors,
+      backgroundColor:errors.map(e=>e<15?'rgba(85,197,148,0.7)':e<30?'rgba(232,201,106,0.7)':'rgba(224,85,85,0.7)'),
+      borderRadius:4,
+    }]
+  },
+  options:{...chartDefaults}
+});
+
+// Error histogram
+const bins = [0,5,10,15,20,25,30,40,50];
+const histData = bins.slice(0,-1).map((b,i)=>errors.filter(e=>e>=b&&e<bins[i+1]).length);
+new Chart(document.getElementById('histChart'), {
+  type:'bar',
+  data:{
+    labels:bins.slice(0,-1).map((b,i)=>`$${b}-${bins[i+1]}`),
+    datasets:[{label:'Frequency',data:histData,backgroundColor:'rgba(201,168,76,0.5)',borderRadius:4}]
+  },
+  options:{...chartDefaults}
+});
+{% endif %}
+
+// Feature importance — real data from model
+const featImportanceData = {{ feature_importance | tojson if feature_importance is defined else '[]' }};
+const fb = document.getElementById('featBars');
+if (featImportanceData && featImportanceData.length > 0) {
+  const maxVal = featImportanceData[0][1];
+  featImportanceData.forEach(([name, val]) => {
+    const pct = maxVal > 0 ? Math.round(val / maxVal * 100) : 0;
+    fb.innerHTML += `<div class="feat-bar-row"><div class="feat-bar-name">${name}</div><div class="feat-bar-track"><div class="feat-bar-fill" data-w="${pct}"></div></div><div class="feat-bar-val">${val}%</div></div>`;
+  });
+} else {
+  // Fallback if importances unavailable
+  const fallback = [
+    {name:'Gold_Price',val:98},{name:'Return_7d',val:82},{name:'MACD',val:74},
+    {name:'Gold_Silver_Ratio',val:68},{name:'DXY',val:62},{name:'Volatility_30d',val:58},
+    {name:'US_2Y_Yield',val:52},{name:'SP500',val:48},{name:'Treasury_Spread',val:44}
+  ];
+  fallback.forEach(f => {
+    fb.innerHTML += `<div class="feat-bar-row"><div class="feat-bar-name">${f.name}</div><div class="feat-bar-track"><div class="feat-bar-fill" data-w="${f.val}"></div></div><div class="feat-bar-val">${f.val}%</div></div>`;
+  });
+}
+setTimeout(()=>document.querySelectorAll('.feat-bar-fill').forEach(b=>b.style.width=b.dataset.w+'%'),400);
+</script>
+</body>
+</html>

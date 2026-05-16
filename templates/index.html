@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>GoldCast — ML Gold Price Oracle</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+/* ── VARIABLES ── */
+:root{
+  --g1:#C9A84C;--g2:#E8C96A;--g3:#F5E6A3;
+  --dark:#08080A;--d2:#0F0F14;--d3:#16161E;--d4:#1E1E28;--d5:#262632;
+  --border:rgba(201,168,76,0.22);--border2:rgba(201,168,76,0.08);
+  --text:#F0EDE6;--muted:#6B6578;--muted2:#9A9198;
+  --green:#55C594;--red:#E05555;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text);overflow-x:hidden;cursor:none}
+
+/* ── CANVAS ── */
+#pcv{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+/* ── CURSOR ── */
+.cursor{position:fixed;width:7px;height:7px;background:var(--g2);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);mix-blend-mode:screen;transition:transform .08s}
+.cursor-ring{position:fixed;width:34px;height:34px;border:1px solid rgba(201,168,76,.55);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:all .16s ease}
+.cursor-glow{position:fixed;width:240px;height:240px;background:radial-gradient(circle,rgba(201,168,76,.055),transparent 65%);border-radius:50%;pointer-events:none;z-index:1;transform:translate(-50%,-50%);transition:left .12s,top .12s}
+
+/* ── NOISE ── */
+body::after{content:'';position:fixed;inset:0;z-index:2;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  opacity:.32}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;
+  padding:18px 56px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border2);backdrop-filter:blur(28px);
+  background:rgba(8,8,10,.78)}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-icon{
+  width:34px;height:34px;border-radius:7px;
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  display:grid;place-items:center;
+  font-family:'Playfair Display',serif;font-weight:900;font-size:13px;color:var(--dark);
+  animation:iconGlow 3.5s ease-in-out infinite;
+}
+@keyframes iconGlow{
+  0%,100%{box-shadow:0 0 14px rgba(201,168,76,.4),0 0 28px rgba(201,168,76,.15)}
+  50%{box-shadow:0 0 28px rgba(201,168,76,.7),0 0 56px rgba(201,168,76,.3)}
+}
+.nav-name{font-family:'Playfair Display',serif;font-size:18px;font-weight:700}
+.nav-name em{color:var(--g1);font-style:italic}
+.nav-tag{
+  font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;
+  color:var(--muted);border:1px solid var(--border);padding:5px 14px;border-radius:20px;
+  position:relative;overflow:hidden;
+}
+.nav-tag::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent 0%,rgba(201,168,76,.18) 50%,transparent 100%);
+  transform:translateX(-100%);
+  animation:navShimmer 3.2s ease-in-out infinite 1.5s;
+}
+@keyframes navShimmer{0%{transform:translateX(-100%)}50%,100%{transform:translateX(100%)}}
+
+/* ── HERO ── */
+.hero{
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;padding:120px 48px 80px;
+  position:relative;overflow:hidden;z-index:3;
+}
+.hero-grid{
+  position:absolute;inset:0;
+  background-image:linear-gradient(var(--border2) 1px,transparent 1px),
+                   linear-gradient(90deg,var(--border2) 1px,transparent 1px);
+  background-size:60px 60px;
+  mask-image:radial-gradient(ellipse 85% 85% at 50% 50%,black,transparent 70%);
+  animation:gridBreath 7s ease-in-out infinite;
+}
+@keyframes gridBreath{0%,100%{opacity:.2}50%{opacity:.55}}
+
+/* Orbs */
+.orb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0}
+.orb1{width:640px;height:640px;background:radial-gradient(circle,rgba(201,168,76,.1),transparent 70%);top:-220px;left:-220px;animation:o1 18s ease-in-out infinite}
+.orb2{width:420px;height:420px;background:radial-gradient(circle,rgba(232,201,106,.08),transparent 70%);bottom:-120px;right:-100px;animation:o2 14s ease-in-out infinite}
+.orb3{width:280px;height:280px;background:radial-gradient(circle,rgba(245,230,163,.065),transparent 70%);top:42%;left:8%;animation:o3 20s ease-in-out infinite}
+.orb4{width:200px;height:200px;background:radial-gradient(circle,rgba(201,168,76,.09),transparent 70%);top:18%;right:12%;animation:o4 16s ease-in-out infinite}
+@keyframes o1{0%,100%{transform:translate(0,0) scale(1)}25%{transform:translate(45px,-35px) scale(1.06)}50%{transform:translate(90px,25px) scale(.94)}75%{transform:translate(25px,55px) scale(1.03)}}
+@keyframes o2{0%,100%{transform:translate(0,0)}33%{transform:translate(-35px,25px) scale(1.12)}66%{transform:translate(25px,-45px) scale(.88)}}
+@keyframes o3{0%,100%{transform:translate(0,0)}50%{transform:translate(70px,-50px)}}
+@keyframes o4{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-45px,35px) scale(1.18)}}
+
+/* Hero content */
+.hero-content{position:relative;z-index:2}
+.hero-eyebrow{
+  font-family:'Space Mono',monospace;font-size:10px;letter-spacing:4px;
+  color:var(--g1);text-transform:uppercase;margin-bottom:28px;
+  display:inline-flex;align-items:center;gap:18px;
+  opacity:0;animation:fadeUp .9s ease .15s forwards;
+}
+.eyeline{width:36px;height:1px;background:linear-gradient(90deg,transparent,var(--g1));animation:eyeAnim 2.5s ease-in-out infinite}
+.eyeline.r{background:linear-gradient(90deg,var(--g1),transparent)}
+@keyframes eyeAnim{0%,100%{opacity:.4;transform:scaleX(1)}50%{opacity:1;transform:scaleX(1.6)}}
+
+.hero-title{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(54px,8.5vw,108px);
+  font-weight:900;line-height:.95;letter-spacing:-3px;
+  margin-bottom:32px;
+  opacity:0;animation:fadeUp .9s ease .35s forwards;
+}
+.hl1{display:block;color:var(--text)}
+.hl2{
+  display:block;font-style:italic;
+}
+@keyframes goldFlow{0%{background-position:0% center}100%{background-position:250% center}}
+
+/* ── CHAR REVEAL ── */
+.char{
+  display:inline-block;
+  opacity:0;
+  transform:translateY(28px) rotate(-4deg);
+  animation:charIn .55s cubic-bezier(.23,1,.32,1) forwards;
+}
+@keyframes charIn{
+  to{opacity:1;transform:translateY(0) rotate(0deg)}
+}
+/* gold glow pulse on hl2 chars */
+.hl2 .char{
+  background:linear-gradient(110deg,var(--g1) 0%,var(--g2) 35%,var(--g3) 60%,var(--g2) 80%,var(--g1) 100%);
+  background-size:250% auto;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:charIn .55s cubic-bezier(.23,1,.32,1) forwards,
+            goldCharGlow 3.5s ease-in-out infinite,
+            goldFlow 5s linear infinite;
+}
+@keyframes goldCharGlow{
+  0%,100%{filter:drop-shadow(0 0 0px transparent)}
+  50%{filter:drop-shadow(0 0 18px rgba(201,168,76,.85)) drop-shadow(0 0 32px rgba(232,201,106,.45))}
+}
+/* hl2 extra ambient glow ring */
+.hl2{
+  position:relative;
+  text-shadow:none;
+  opacity:1 !important;
+}
+.hl2::after{
+  content:'';
+  position:absolute;
+  inset:-18px -32px;
+  background:radial-gradient(ellipse 80% 60% at 50% 55%,rgba(201,168,76,.13),transparent 70%);
+  pointer-events:none;
+  animation:hl2Halo 4s ease-in-out infinite;
+  z-index:-1;
+}
+@keyframes hl2Halo{
+  0%,100%{opacity:.5;transform:scale(1)}
+  50%{opacity:1;transform:scale(1.06)}
+}
+
+.hero-sub{
+  font-size:16px;color:var(--muted2);max-width:560px;line-height:1.85;
+  margin:0 auto 56px;
+  opacity:0;animation:fadeUp .9s ease .55s forwards;
+}
+.hero-stats{
+  display:flex;gap:56px;justify-content:center;
+  margin-bottom:72px;flex-wrap:wrap;
+  opacity:0;animation:fadeUp .9s ease .75s forwards;
+}
+.stat{text-align:center;position:relative}
+.stat-val{
+  font-family:'Playfair Display',serif;font-size:42px;font-weight:700;
+  color:var(--g2);line-height:1;
+}
+.stat-label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-top:14px}
+.stat::after{
+  content:'';position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);
+  width:20px;height:1px;background:linear-gradient(90deg,transparent,var(--g1),transparent);
+}
+
+.scroll-cta{
+  display:inline-flex;align-items:center;gap:14px;
+  font-family:'Space Mono',monospace;font-size:9px;letter-spacing:3px;
+  color:var(--muted);text-transform:uppercase;
+  opacity:0;animation:fadeUp .9s ease 1.05s forwards;
+}
+.scroll-arrows{display:flex;flex-direction:column;align-items:center;gap:3px;animation:scBounce 2.2s ease-in-out infinite}
+.scroll-arrows i{display:block;width:1px;height:9px;background:var(--g1);animation:scFade 2.2s ease-in-out infinite}
+.scroll-arrows i:nth-child(2){animation-delay:.18s}
+.scroll-arrows i:nth-child(3){animation-delay:.36s}
+@keyframes scBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
+@keyframes scFade{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(34px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── SECTION HEADERS ── */
+.sec-wrap{padding:88px 56px 0;position:relative;z-index:3}
+.sec-label{
+  font-family:'Space Mono',monospace;font-size:9px;letter-spacing:3px;
+  color:var(--g1);text-transform:uppercase;margin-bottom:14px;
+  display:flex;align-items:center;gap:14px;
+}
+.sec-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+.sec-title{font-family:'Playfair Display',serif;font-size:clamp(28px,4vw,54px);font-weight:700;letter-spacing:-1.5px;margin-bottom:12px}
+.sec-title em{color:var(--g1);font-style:italic}
+.sec-sub{color:var(--muted2);font-size:15px;max-width:600px;line-height:1.75}
+
+/* ── MODELS LIST ── */
+.models-list{
+  display:flex;flex-direction:column;
+  position:relative;z-index:3;
+  margin-top:52px;
+  width:100%;
+}
+
+/* ── MODEL ROW ── */
+.model-row{
+  display:grid;
+  grid-template-columns:44fr 56fr;
+  min-height:540px;
+  border-top:1px solid var(--border2);
+  position:relative;overflow:hidden;
+  text-decoration:none;color:var(--text);
+  width:100%;
+  /* entrance */
+  opacity:0;transform:translateY(56px);
+  transition:opacity .95s cubic-bezier(.23,1,.32,1), transform .95s cubic-bezier(.23,1,.32,1);
+}
+.model-row:last-child{border-bottom:1px solid var(--border2)}
+.model-row.visible{opacity:1;transform:translateY(0)}
+
+/* Hover shimmer sweep */
+.model-row::before{
+  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(108deg,
+    transparent 20%,
+    rgba(201,168,76,.035) 45%,
+    rgba(232,201,106,.06) 50%,
+    rgba(201,168,76,.035) 55%,
+    transparent 80%);
+  transform:translateX(-120%);transition:transform 0s;
+}
+.model-row:hover::before{transform:translateX(120%);transition:transform .85s ease}
+
+/* Cursor spotlight */
+.spotlight{
+  position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(700px circle at var(--sx,50%) var(--sy,50%),rgba(201,168,76,.045),transparent 65%);
+  opacity:0;transition:opacity .5s;
+}
+.model-row:hover .spotlight{opacity:1}
+
+/* Rank-1 top glow border */
+.model-row.rank-1::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;z-index:1;
+  background:linear-gradient(90deg,transparent,var(--g1) 25%,var(--g2) 50%,var(--g1) 75%,transparent);
+  background-size:220% auto;
+  animation:topBorderFlow 3.5s linear infinite;
+}
+@keyframes topBorderFlow{0%{background-position:0% center}100%{background-position:220% center}}
+.model-row.rank-1{background:linear-gradient(135deg,rgba(201,168,76,.045) 0%,transparent 55%)}
+
+/* ── LEFT PANEL ── */
+.row-left{
+  padding:60px 68px;
+  display:flex;flex-direction:column;justify-content:space-between;
+  border-right:1px solid var(--border2);
+  position:relative;z-index:1;
+  transition:background .45s;
+}
+.model-row:hover .row-left{background:rgba(201,168,76,.018)}
+
+.row-rank-line{display:flex;align-items:center;gap:18px;margin-bottom:36px}
+
+.rank-big{
+  font-family:'Playfair Display',serif;font-size:92px;font-weight:900;
+  line-height:1;letter-spacing:-6px;
+  color:rgba(201,168,76,.12);
+  transition:color .55s, text-shadow .55s, transform .55s cubic-bezier(.23,1,.32,1);
+}
+.model-row:hover .rank-big{
+  color:rgba(201,168,76,.45);
+  text-shadow:0 0 60px rgba(201,168,76,.28);
+  transform:scale(1.04) translateX(-3px);
+}
+
+.rank-icon{
+  font-size:34px;color:var(--g1);
+  display:flex;align-items:center;justify-content:center;
+  width:52px;height:52px;
+  background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);
+  border-radius:12px;flex-shrink:0;
+  transition:transform .65s cubic-bezier(.23,1,.32,1), box-shadow .45s, background .3s;
+}
+.model-row:hover .rank-icon{
+  transform:rotate(360deg) scale(1.18);
+  box-shadow:0 0 24px rgba(201,168,76,.6);
+  background:rgba(201,168,76,.16);
+}
+
+.rank-badge{
+  font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;
+  padding:6px 16px;border-radius:5px;
+  background:rgba(201,168,76,.1);color:var(--g2);
+  border:1px solid rgba(201,168,76,.2);
+  margin-left:auto;
+  transition:background .3s, box-shadow .3s, border-color .3s;
+}
+.rank-badge.best{
+  background:var(--g1);color:var(--dark);font-weight:700;
+  animation:bestGlow 3s ease-in-out infinite;
+}
+@keyframes bestGlow{0%,100%{box-shadow:0 0 0 transparent}50%{box-shadow:0 0 22px rgba(201,168,76,.55)}}
+.model-row:hover .rank-badge{background:rgba(201,168,76,.2);border-color:var(--g1);box-shadow:0 0 14px rgba(201,168,76,.3)}
+
+.row-name{
+  font-family:'Playfair Display',serif;font-size:42px;font-weight:700;
+  letter-spacing:-1.5px;margin-bottom:8px;line-height:1.05;
+  transition:color .35s;
+}
+.model-row:hover .row-name{color:var(--g3)}
+.row-type{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1.5px;margin-bottom:24px}
+.row-desc{font-size:14px;color:var(--muted2);line-height:1.82;margin-bottom:28px;max-width:490px}
+.row-pipeline{
+  font-family:'Space Mono',monospace;font-size:10px;color:var(--g1);letter-spacing:.5px;
+  background:rgba(201,168,76,.07);border-left:2px solid var(--g1);
+  padding:12px 18px;border-radius:8px;margin-bottom:28px;
+  position:relative;overflow:hidden;
+  transition:background .35s;
+}
+.row-pipeline::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(201,168,76,.12),transparent);
+  transform:translateX(-100%);
+}
+.model-row:hover .row-pipeline{background:rgba(201,168,76,.13)}
+.model-row:hover .row-pipeline::after{transform:translateX(100%);transition:transform .7s ease}
+
+/* R² bar */
+.r2-bar{margin-bottom:28px}
+.r2-head{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:8px;font-family:'Space Mono',monospace}
+.r2-head strong{color:var(--g2)}
+.r2-track{height:3px;background:var(--d4);border-radius:2px;overflow:hidden}
+.r2-fill{
+  height:100%;border-radius:2px;width:0;
+  background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3));
+  background-size:220% auto;
+  transition:width 1.7s cubic-bezier(.23,1,.32,1);
+}
+.model-row.visible .r2-fill{animation:barFlow 4s linear infinite}
+@keyframes barFlow{0%{background-position:0% center}100%{background-position:220% center}}
+
+/* Metric boxes */
+.row-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:28px}
+.metric-box{
+  background:var(--d3);border:1px solid var(--border2);border-radius:10px;
+  padding:16px;text-align:center;
+  transition:border-color .35s, transform .45s cubic-bezier(.23,1,.32,1), background .35s;
+}
+.model-row:hover .metric-box{border-color:rgba(201,168,76,.3);background:var(--d4)}
+.model-row:hover .metric-box:nth-child(1){transform:translateY(-4px);transition-delay:.0s}
+.model-row:hover .metric-box:nth-child(2){transform:translateY(-4px);transition-delay:.06s}
+.model-row:hover .metric-box:nth-child(3){transform:translateY(-4px);transition-delay:.12s}
+.metric-val{font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--g2)}
+.metric-lbl{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:4px}
+
+/* Tags */
+.row-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:32px}
+.tag{
+  font-size:10px;color:var(--muted2);background:var(--d4);
+  padding:4px 11px;border-radius:4px;border:1px solid var(--d5);
+  transition:all .25s;
+}
+.model-row:hover .tag{border-color:var(--border2);color:var(--muted)}
+
+/* CTA button */
+.row-cta{
+  display:inline-flex;align-items:center;gap:11px;
+  font-size:13px;font-weight:600;letter-spacing:.3px;
+  color:var(--g1);padding:14px 30px;
+  border:1px solid var(--border);border-radius:9px;
+  align-self:flex-start;
+  position:relative;overflow:hidden;
+  transition:color .4s, border-color .4s;
+}
+.row-cta::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(105deg,var(--g1),var(--g2));
+  transform:translateX(-100%) skewX(-8deg);
+  transition:transform .45s cubic-bezier(.23,1,.32,1);
+  z-index:-1;
+}
+.model-row:hover .row-cta{color:var(--dark);border-color:var(--g1)}
+.model-row:hover .row-cta::before{transform:translateX(0) skewX(-8deg)}
+
+/* ── RIGHT PANEL ── */
+.row-right{
+  padding:60px 68px;
+  display:flex;flex-direction:column;
+  background:var(--d2);position:relative;z-index:1;
+  transition:background .45s;
+}
+.model-row:hover .row-right{background:rgba(13,13,18,.97)}
+
+.guide-title{
+  font-family:'Space Mono',monospace;font-size:9px;letter-spacing:3px;
+  color:var(--g1);text-transform:uppercase;
+  margin-bottom:30px;display:flex;align-items:center;gap:12px;
+}
+.guide-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+.guide-section{margin-bottom:28px}
+.guide-section-label{
+  font-size:11px;font-weight:600;color:var(--g2);
+  margin-bottom:13px;display:flex;align-items:center;gap:8px;
+}
+.guide-section-label::before{
+  content:'';width:7px;height:7px;background:var(--g1);border-radius:50%;flex-shrink:0;
+  animation:dotPulse 2.2s ease-in-out infinite;
+}
+@keyframes dotPulse{0%,100%{transform:scale(1);box-shadow:0 0 0 transparent}50%{transform:scale(1.5);box-shadow:0 0 10px rgba(201,168,76,.7)}}
+
+.guide-tips{display:flex;flex-direction:column;gap:8px}
+.guide-tip{
+  font-size:12px;color:var(--muted2);line-height:1.68;
+  padding:10px 14px 10px 18px;
+  background:var(--d3);border-radius:6px;
+  border-left:2px solid rgba(201,168,76,.22);
+  transition:border-left-color .35s, color .35s, background .35s;
+}
+.model-row:hover .guide-tip{background:rgba(22,22,30,.9)}
+.model-row:hover .guide-tip:nth-child(1){border-left-color:rgba(201,168,76,.65)}
+.model-row:hover .guide-tip:nth-child(2){border-left-color:rgba(201,168,76,.45);transition-delay:.07s}
+.model-row:hover .guide-tip:nth-child(3){border-left-color:rgba(201,168,76,.3);transition-delay:.14s}
+.model-row:hover .guide-tip:nth-child(4){border-left-color:rgba(201,168,76,.2);transition-delay:.21s}
+.model-row:hover .guide-tip:nth-child(5){border-left-color:rgba(201,168,76,.15);transition-delay:.28s}
+
+.top-features{display:flex;flex-direction:column;gap:8px}
+.feat-row{display:flex;align-items:center;gap:11px}
+.feat-name{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted2);width:170px;flex-shrink:0;transition:color .3s}
+.model-row:hover .feat-name{color:var(--muted)}
+.feat-track{flex:1;height:4px;background:var(--d4);border-radius:2px;overflow:hidden}
+.feat-fill{
+  height:100%;border-radius:2px;width:0;
+  background:linear-gradient(90deg,var(--g1),var(--g2));
+  background-size:200% auto;
+  transition:width 1.5s cubic-bezier(.23,1,.32,1);
+}
+.model-row.visible .feat-fill{animation:barFlow 4s linear infinite}
+.feat-pct{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);width:36px;text-align:right}
+
+.guide-warning{
+  background:linear-gradient(135deg,rgba(201,168,76,.08) 0%,rgba(232,201,106,.04) 100%);
+  border:1px solid rgba(201,168,76,.3);
+  border-radius:12px;padding:16px 20px 16px 22px;
+  font-size:12px;color:var(--muted2);line-height:1.72;
+  margin-top:auto;position:relative;overflow:hidden;
+  backdrop-filter:blur(6px);
+  animation:warnPulse 5s ease-in-out infinite;
+}
+@keyframes warnPulse{
+  0%,100%{border-color:rgba(201,168,76,.25);box-shadow:none}
+  50%{border-color:rgba(201,168,76,.5);box-shadow:0 0 22px rgba(201,168,76,.08)}
+}
+.guide-warning::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;
+  background:linear-gradient(180deg,var(--g1),var(--g2),var(--g1));
+  background-size:100% 200%;animation:warnBar 3.5s ease-in-out infinite}
+@keyframes warnBar{0%{background-position:0% 0%}100%{background-position:0% 200%}}
+.guide-warning::after{
+  content:'';position:absolute;top:-40px;right:-40px;
+  width:120px;height:120px;
+  background:radial-gradient(circle,rgba(201,168,76,.07),transparent 65%);
+  pointer-events:none;animation:warnOrb 4s ease-in-out infinite;
+}
+@keyframes warnOrb{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.2)}}
+.guide-warning strong{
+  color:var(--g2);
+  font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.5px;
+}
+
+/* ── COMPARISON TABLE ── */
+.compare-wrap{padding:88px 56px;position:relative;z-index:3}
+.compare-table{background:var(--d2);border:1px solid var(--border2);border-radius:16px;overflow:hidden}
+.table-head{
+  display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;
+  padding:16px 28px;background:var(--d3);border-bottom:1px solid var(--border2);
+}
+.th{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+.table-row2{
+  display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;
+  padding:18px 28px;border-bottom:1px solid var(--border2);
+  transition:background .22s;align-items:center;cursor:default;
+}
+.table-row2:last-child{border-bottom:none}
+.table-row2:hover{background:var(--d3)}
+.tr-name2{font-weight:600;font-size:14px;display:flex;align-items:center;gap:9px}
+.rank-dot{
+  width:8px;height:8px;border-radius:50%;flex-shrink:0;
+  position:relative;
+}
+.rank-dot::after{
+  content:'';position:absolute;inset:-3px;border-radius:50%;
+  border:1px solid currentColor;opacity:.25;
+}
+.tr-val2{font-family:'Space Mono',monospace;font-size:12px;color:var(--g2)}
+
+/* ── FOOTER ── */
+footer{border-top:1px solid var(--border2);padding:36px 56px;text-align:center;position:relative;z-index:3}
+.footer-text{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px}
+
+/* ── REVEAL ── */
+.reveal{opacity:0;transform:translateY(32px);transition:all .95s cubic-bezier(.23,1,.32,1)}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1024px){
+  .model-row{grid-template-columns:1fr}
+  .row-left{border-right:none;border-bottom:1px solid var(--border2);padding:44px 32px}
+  .row-right{padding:44px 32px}
+  .rank-big{font-size:72px}
+  .row-name{font-size:32px}
+  .sec-wrap,.compare-wrap{padding:60px 28px 0}
+  nav{padding:16px 28px}
+}
+</style>
+</head>
+<body>
+
+<canvas id="pcv"></canvas>
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="ring"></div>
+<div class="cursor-glow" id="cglow"></div>
+
+<nav>
+  <a href="/" class="nav-logo">
+    <div class="nav-icon">Au</div>
+    <div class="nav-name">Gold<em>Cast</em></div>
+  </a>
+  <span class="nav-tag">5 ML MODELS · XAU/USD</span>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<div class="hero">
+  <div class="hero-grid"></div>
+  <div class="orb orb1"></div><div class="orb orb2"></div>
+  <div class="orb orb3"></div><div class="orb orb4"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">
+      <span class="eyeline"></span>
+      Next-Day Gold Price Forecasting System
+      <span class="eyeline r"></span>
+    </div>
+    <h1 class="hero-title">
+      <span class="hl1" id="heroLine1"></span>
+      <span class="hl2" id="heroLine2"></span>
+    </h1>
+    <p class="hero-sub">5 machine learning models trained on 25+ years of market data, macroeconomic indicators, and engineered technical features. Choose your model and get tomorrow's forecast.</p>
+    <div class="hero-stats">
+      <div class="stat"><div class="stat-val" data-target="6419">0</div><div class="stat-label">Trading Days</div></div>
+      <div class="stat"><div class="stat-val" data-target="32">0</div><div class="stat-label">Features</div></div>
+      <div class="stat"><div class="stat-val" data-target="5">0</div><div class="stat-label">ML Models</div></div>
+      <div class="stat"><div class="stat-val" data-suffix="%" data-target="99.7">0</div><div class="stat-label">Best R²</div></div>
+    </div>
+    <div class="scroll-cta">
+      <span>Scroll to explore models</span>
+      <div class="scroll-arrows"><i></i><i></i><i></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODELS HEADER ═══ -->
+<div class="sec-wrap reveal">
+  <div class="sec-label">Model Rankings</div>
+  <h2 class="sec-title">Choose Your <em>Forecasting Model</em></h2>
+  <p class="sec-sub">Each model card shows full guidance on how to use it, what features matter most, and when to trust its predictions. Click to open the prediction form.</p>
+</div>
+
+<!-- ═══ MODELS LIST ═══ -->
+<div class="models-list">
+  {% for key, m in models.items() %}
+  <a href="/input/{{ key }}" class="model-row rank-{{ m.rank }}" style="transition-delay:{{ loop.index0 * 0.09 }}s">
+    <div class="spotlight"></div>
+
+    <!-- LEFT PANEL -->
+    <div class="row-left">
+      <div>
+        <div class="row-rank-line">
+          <div class="rank-big">{{ m.rank }}</div>
+          <div class="rank-icon">{{ m.icon }}</div>
+          <div class="rank-badge {% if m.rank == 1 %}best{% endif %}">{{ m.badge }}</div>
+        </div>
+        <div class="row-name">{{ m.name }}</div>
+        <div class="row-type">{{ m.type }} · {{ m.features }} Features</div>
+        <div class="row-desc">{{ m.description }}</div>
+        <div class="row-pipeline">{{ m.pipeline }}</div>
+        <div class="r2-bar">
+          <div class="r2-head">R² Score <strong>{{ "%.4f"|format(m.r2) }}</strong></div>
+          <div class="r2-track"><div class="r2-fill" data-w="{{ (m.r2 * 100)|int }}"></div></div>
+        </div>
+        <div class="row-metrics">
+          <div class="metric-box"><div class="metric-val">{{ "%.4f"|format(m.r2) }}</div><div class="metric-lbl">R²</div></div>
+          <div class="metric-box"><div class="metric-val">${{ m.rmse }}</div><div class="metric-lbl">RMSE</div></div>
+          <div class="metric-box"><div class="metric-val">${{ m.mae }}</div><div class="metric-lbl">MAE</div></div>
+        </div>
+        <div class="row-tags">
+          {% for s in m.strengths %}<span class="tag">{{ s }}</span>{% endfor %}
+        </div>
+      </div>
+      <div class="row-cta">Start Predicting →</div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="row-right">
+      <div class="guide-title">Model Guidance & Usage Tips</div>
+
+      {% if key == 'lasso_pca' %}
+      <div class="guide-section">
+        <div class="guide-section-label">Why Use This Model</div>
+        <div class="guide-tips">
+          <div class="guide-tip">🥇 This is the #1 ranked model — use it as your primary prediction.</div>
+          <div class="guide-tip">L1 regularisation automatically zeroes out weak PCA components, keeping only the most influential signals.</div>
+          <div class="guide-tip">Highest CV R²=0.969 — best generalisation on unseen data.</div>
+          <div class="guide-tip">Slightly more aggressive than Ridge — good when market has clear momentum.</div>
+        </div>
+      </div>
+      <div class="guide-section">
+        <div class="guide-section-label">Critical Input Rules</div>
+        <div class="guide-tips">
+          <div class="guide-tip">Gold_Price is the most important input — enter today's exact spot price.</div>
+          <div class="guide-tip">Return_7d / Return_14d / Return_30d must be <strong style="color:var(--g2)">decimal fractions</strong>: 1.6% gain = 0.016, NOT 1.6.</div>
+          <div class="guide-tip">Gold_Silver_Ratio = Gold_Price ÷ Silver price (e.g. 3320 ÷ 32.8 = 101.2).</div>
+          <div class="guide-tip">Gold_VIX_interaction = Gold_Price × current VIX index value.</div>
+          <div class="guide-tip">Volatility_7d / Volatility_30d = std of daily RETURNS as decimal (0.008 = 0.8%/day).</div>
+        </div>
+      </div>
+      <div class="guide-section">
+        <div class="guide-section-label">Top Influential Features</div>
+        <div class="top-features">
+          <div class="feat-row"><div class="feat-name">Gold_Price</div><div class="feat-track"><div class="feat-fill" data-w="100"></div></div><div class="feat-pct">35.5%</div></div>
+          <div class="feat-row"><div class="feat-name">Gold_VIX_interaction</div><div class="feat-track"><div class="feat-fill" data-w="72"></div></div><div class="feat-pct">25.6%</div></div>
+          <div class="feat-row"><div class="feat-name">SP500</div><div class="feat-track"><div class="feat-fill" data-w="48"></div></div><div class="feat-pct">17.1%</div></div>
+          <div class="feat-row"><div class="feat-name">Platinum</div><div class="feat-track"><div class="feat-fill" data-w="30"></div></div><div class="feat-pct">10.7%</div></div>
+          <div class="feat-row"><div class="feat-name">TIP_ETF</div><div class="feat-track"><div class="feat-fill" data-w="18"></div></div><div class="feat-pct">6.4%</div></div>
+        </div>
+      </div>
+
+      {% elif key == 'ridge_pca' %}
+      <div class="guide-section">
+        <div class="guide-section-label">Why Use This Model</div>
+        <div class="guide-tips">
+          <div class="guide-tip">🥈 Second-best model — near-identical accuracy to Lasso PCA.</div>
+          <div class="guide-tip">L2 regularisation keeps all PCA components with small weights — more conservative and stable.</div>
+          <div class="guide-tip">Best to compare with Lasso: if both agree closely → very high confidence.</div>
+        </div>
+      </div>
+      <div class="guide-section">
+        <div class="guide-section-label">Critical Input Rules</div>
+        <div class="guide-tips">
+          <div class="guide-tip">Same input rules as Lasso PCA — all 32 features go through the same PCA transform.</div>
+          <div class="guide-tip">Return columns must be <strong style="color:var(--g2)">decimal fractions</strong>: 0.016 = 1.6%, NOT 1.6.</div>
+          <div class="guide-tip">If Ridge and Lasso predictions differ by more than $50 → re-check your inputs.</div>
+        </div>
+      </div>
+      <div class="guide-section">
+        <div class="guide-section-label">Top Influential Features</div>
+        <div class="top-features">
+          <div class="feat-row"><div class="feat-name">Gold_Price</div><div class="feat-track"><div class="feat-fill" data-w="100"></div></div><div class="feat-pct">35.5%</div></div>
+          <div class="feat-row"><div class="feat-name">Gold_VIX_interaction</div><div class="feat-track"><div class="feat-fill" data-w="72"></div></div><div class="feat-pct">25.6%</div></div>
+          <div class="feat-row"><div class="feat-name">SP500</div><div class="feat-track"><div class="feat-fill" data-w="48"></div></div><div class="feat-pct">17.1%</div></div>
+          <div class="feat-row"><div class="feat-name">Platinum</div><div class="feat-track"><div class="feat-fill" data-w="30"></div></div><div class="feat-pct">10.7%</div></div>
+          <div class="feat-row"><div class="feat-name">TIP_ETF</div><div class="feat-track"><div class="feat-fill" data-w="18"></div></div><div class="feat-pct">6.4%</div></div>
+        </div>
+      </div>
+
+      {% elif key == 'lightgbm' %}
+      <div class="guide-section">
+        <div class="guide-section-label">Why Use This Model</div>
+        <div class="guide-tips">
+          <div class="guide-tip">🥉 Third-ranked by R² (0.9954) — best raw RMSE and MAE within training range.</div>
+          <div class="guide-tip">Tree-based model — no feature scaling needed internally.</div>
+          <div class="guide-tip">Excellent at capturing non-linear relationships between features.</div>
+          <div class="guide-tip">Most important features: MACD, Momentum_14d, Volatility indicators.</div>
+        </div>
+      </div>
+      <div class="guide-section">
+        <div class="guide-section-label">Top Influential Features</div>
+        <div class="top-features">
+          <div class="feat-row"><div class="feat-name">Gold_Price</div><div class="feat-track"><div class="feat-fill" data-w="100"></div></div><div class="feat-pct">27.7%</div></div>
+          <div class="feat-row"><div class="feat-name">Gold_VIX_interaction</div><div class="feat-track"><div class="feat-fill" data-w="65"></div></div><div class="feat-pct">18.0%</div></div>
+          <div class="feat-row"><div class="feat-name">MACD</div><div class="feat-track"><div class="feat-fill" data-w="40"></div></div><div class="feat-pct">11.1%</div></div>
+          <div class="feat-row"><div class="feat-name">Momentum_14d</div><div class="feat-track"><div class="feat-fill" data-w="25"></div></div><div class="feat-pct">6.9%</div></div>
+        </div>
+      </div>
+      <div class="guide-warning"><strong>◈ EXTRAPOLATION NOTE</strong> — Trees cannot predict prices above their training ceiling (~$2,600). At current gold levels above $3,000, LightGBM will significantly underpredict. Use for trend direction only, not absolute price.</div>
+
+      {% elif key == 'xgboost' %}
+      <div class="guide-section">
+        <div class="guide-section-label">Why Use This Model</div>
+        <div class="guide-tips">
+          <div class="guide-tip">Industry-standard gradient boosting — benchmark model.</div>
+          <div class="guide-tip">Built-in regularisation handles overfitting well.</div>
+          <div class="guide-tip">If XGBoost and Lasso PCA agree on direction → strong signal.</div>
+        </div>
+      </div>
+      <div class="guide-section">
+        <div class="guide-section-label">Top Influential Features</div>
+        <div class="top-features">
+          <div class="feat-row"><div class="feat-name">Gold_Price</div><div class="feat-track"><div class="feat-fill" data-w="100"></div></div><div class="feat-pct">57.6%</div></div>
+          <div class="feat-row"><div class="feat-name">Gold_VIX_interaction</div><div class="feat-track"><div class="feat-fill" data-w="28"></div></div><div class="feat-pct">16.1%</div></div>
+          <div class="feat-row"><div class="feat-name">Momentum_14d</div><div class="feat-track"><div class="feat-fill" data-w="16"></div></div><div class="feat-pct">9.2%</div></div>
+        </div>
+      </div>
+      <div class="guide-warning"><strong>◈ EXTRAPOLATION NOTE</strong> — Same ceiling issue as LightGBM. XGBoost was trained on prices up to ~$2,600 and will severely underpredict at current gold levels. Use Lasso PCA or Ridge PCA for any price above $2,700.</div>
+
+      {% elif key == 'ridge_gold' %}
+      <div class="guide-section">
+        <div class="guide-section-label">Why Use This Model</div>
+        <div class="guide-tips">
+          <div class="guide-tip">Direct Ridge on 32 raw features — no PCA compression.</div>
+          <div class="guide-tip">Good as a sanity check against Ridge/Lasso PCA results.</div>
+          <div class="guide-tip">More sensitive to multicollinearity between features.</div>
+        </div>
+      </div>
+      <div class="guide-section">
+        <div class="guide-section-label">Top Influential Features</div>
+        <div class="top-features">
+          <div class="feat-row"><div class="feat-name">Gold_Price</div><div class="feat-track"><div class="feat-fill" data-w="100"></div></div><div class="feat-pct">73.8%</div></div>
+          <div class="feat-row"><div class="feat-name">Gold_Silver_Ratio</div><div class="feat-track"><div class="feat-fill" data-w="20"></div></div><div class="feat-pct">14.8%</div></div>
+          <div class="feat-row"><div class="feat-name">Price_diff</div><div class="feat-track"><div class="feat-fill" data-w="8"></div></div><div class="feat-pct">5.9%</div></div>
+        </div>
+      </div>
+      <div class="guide-warning"><strong>◈ TRAINING RANGE NOTE</strong> — This model was trained when gold was $1,800–$2,600/oz. At current prices near $3,300+, predictions will be significantly lower than actual. Use Lasso or Ridge PCA for current-price predictions.</div>
+      {% endif %}
+
+    </div><!-- /row-right -->
+  </a>
+  {% endfor %}
+</div>
+
+<!-- ═══ COMPARISON TABLE ═══ -->
+<div class="compare-wrap">
+  <div class="reveal">
+    <div class="sec-label">Side by Side</div>
+    <h2 class="sec-title">Model <em>Comparison</em></h2>
+    <p class="sec-sub" style="margin-bottom:28px">Quick reference of all models ranked by performance metrics on held-out test data.</p>
+  </div>
+  <div class="compare-table reveal" style="transition-delay:.2s">
+    <div class="table-head" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 0.5fr">
+      <div class="th">Model</div>
+      <div class="th">Prediction</div>
+      <div class="th">R²</div>
+      <div class="th">RMSE</div>
+      <div class="th">MAE</div>
+      <div class="th">Rank</div>
+    </div>
+    {% for key, m in models.items()|sort(attribute='1.r2', reverse=True) %}
+    {% set is_failed = m.r2 < 0 %}
+    <div class="table-row2" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 0.5fr{% if is_failed %};opacity:0.5{% endif %}">
+      <div class="tr-name2">
+        <div class="rank-dot" style="background:{{ m.color }};color:{{ m.color }}"></div>
+        {{ m.name }}
+        {% if is_failed %}<span style="font-family:'Space Mono',monospace;font-size:8px;color:#E05555;background:rgba(224,85,85,0.12);border:1px solid rgba(224,85,85,0.3);padding:2px 7px;border-radius:3px;margin-left:8px">FAILED</span>{% endif %}
+      </div>
+      <div class="tr-val2" style="{% if is_failed %}color:var(--muted){% endif %}">
+        {% if is_failed %}—{% else %}—{% endif %}
+      </div>
+      <div class="tr-val2" style="{% if is_failed %}color:#E05555{% endif %}">{{ "%.4f"|format(m.r2) }}</div>
+      <div class="tr-val2" style="{% if is_failed %}color:var(--muted){% endif %}">${{ m.rmse }}</div>
+      <div class="tr-val2" style="{% if is_failed %}color:var(--muted){% endif %}">${{ m.mae }}</div>
+      <div class="tr-val2" style="font-family:'Space Mono',monospace;font-size:11px;color:var(--g1)">#{{ m.rank }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<footer>
+  <div class="footer-text">GoldCast · Gold Price Forecasting System · 5 ML Models · XAU/USD</div>
+</footer>
+
+<script>
+/* ─────────────────────────────────────────
+   PARTICLE SYSTEM
+───────────────────────────────────────── */
+(function(){
+  const cv = document.getElementById('pcv');
+  const ctx = cv.getContext('2d');
+  let W, H, pts = [];
+
+  function resize(){
+    W = cv.width  = window.innerWidth;
+    H = cv.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Gold colour palette
+  const cols = [
+    'rgba(201,168,76,',
+    'rgba(232,201,106,',
+    'rgba(245,230,163,',
+    'rgba(201,168,76,',
+  ];
+
+  function rand(a,b){ return a + Math.random()*(b-a) }
+
+  function mkPt(){
+    return {
+      x: rand(0, W),
+      y: rand(H*0.2, H),
+      r: rand(0.4, 1.8),
+      vy: rand(-0.35, -0.08),
+      vx: rand(-0.12, 0.12),
+      alpha: rand(0.08, 0.35),
+      dAlpha: rand(-0.002, 0.002),
+      col: cols[Math.floor(Math.random()*cols.length)],
+      life: 1,
+    }
+  }
+
+  for(let i=0;i<90;i++) pts.push(mkPt());
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    pts.forEach((p,i)=>{
+      p.x += p.vx;
+      p.y += p.vy;
+      p.alpha += p.dAlpha;
+      if(p.alpha < 0.04) p.dAlpha = Math.abs(p.dAlpha);
+      if(p.alpha > 0.38) p.dAlpha = -Math.abs(p.dAlpha);
+
+      // respawn when off screen
+      if(p.y < -10 || p.x < -10 || p.x > W+10){
+        pts[i] = Object.assign(mkPt(), {y: H + rand(0,60)});
+        return;
+      }
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fillStyle = p.col + p.alpha + ')';
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ─────────────────────────────────────────
+   CURSOR
+───────────────────────────────────────── */
+const cur   = document.getElementById('cursor');
+const ring  = document.getElementById('ring');
+const cglow = document.getElementById('cglow');
+let mx = 0, my = 0, rx = 0, ry = 0;
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cur.style.left  = mx + 'px'; cur.style.top  = my + 'px';
+  cglow.style.left = mx + 'px'; cglow.style.top = my + 'px';
+});
+
+(function ringLoop(){
+  rx += (mx - rx) * 0.15;
+  ry += (my - ry) * 0.15;
+  ring.style.left = rx + 'px';
+  ring.style.top  = ry + 'px';
+  requestAnimationFrame(ringLoop);
+})();
+
+document.querySelectorAll('a, .model-row, button').forEach(el => {
+  el.addEventListener('mouseenter', ()=>{
+    ring.style.transform = 'translate(-50%,-50%) scale(2.2)';
+    ring.style.borderColor = 'var(--g1)';
+    ring.style.opacity = '0.8';
+  });
+  el.addEventListener('mouseleave', ()=>{
+    ring.style.transform = 'translate(-50%,-50%) scale(1)';
+    ring.style.borderColor = 'rgba(201,168,76,0.5)';
+    ring.style.opacity = '1';
+  });
+});
+
+/* ─────────────────────────────────────────
+   SPOTLIGHT: cursor position inside each row
+───────────────────────────────────────── */
+document.querySelectorAll('.model-row').forEach(row => {
+  row.addEventListener('mousemove', e => {
+    const r = row.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width  * 100).toFixed(1) + '%';
+    const y = ((e.clientY - r.top)  / r.height * 100).toFixed(1) + '%';
+    row.querySelector('.spotlight').style.cssText =
+      `background:radial-gradient(700px circle at ${x} ${y},rgba(201,168,76,.048),transparent 65%);opacity:1`;
+  });
+  row.addEventListener('mouseleave', () => {
+    const s = row.querySelector('.spotlight');
+    if(s) s.style.opacity = '0';
+  });
+});
+
+/* ─────────────────────────────────────────
+   INTERSECTION OBSERVER — reveal + animate bars
+───────────────────────────────────────── */
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if(!e.isIntersecting) return;
+    e.target.classList.add('visible');
+    e.target.querySelectorAll('.r2-fill, .feat-fill').forEach(b => {
+      b.style.width = (b.dataset.w || 0) + '%';
+    });
+    obs.unobserve(e.target);
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.model-row, .reveal').forEach(el => obs.observe(el));
+
+/* ─────────────────────────────────────────
+   HERO COUNTER ANIMATION
+───────────────────────────────────────── */
+setTimeout(()=>{
+  document.querySelectorAll('.stat-val[data-target]').forEach(el => {
+    const target = parseFloat(el.dataset.target);
+    const suffix = el.dataset.suffix || '';
+    const isFloat = String(target).includes('.');
+    let start = null;
+    const dur = 1800;
+    const step = ts => {
+      if(!start) start = ts;
+      const prog = Math.min((ts - start) / dur, 1);
+      const ease = 1 - Math.pow(1 - prog, 3);
+      const val  = target * ease;
+      el.textContent = (isFloat ? val.toFixed(1) : Math.floor(val).toLocaleString()) + suffix;
+      if(prog < 1) requestAnimationFrame(step);
+    };
+    setTimeout(()=> requestAnimationFrame(step), 900);
+  });
+}, 0);
+
+/* ─────────────────────────────────────────
+   HERO TITLE — CHAR-BY-CHAR REVEAL
+───────────────────────────────────────── */
+(function(){
+  const line1Text = 'Predict the Price';
+  const line2Text = 'of Gold';
+  const el1 = document.getElementById('heroLine1');
+  const el2 = document.getElementById('heroLine2');
+  if(!el1 || !el2) return;
+
+  function buildChars(el, text, baseDelay, isGold){
+    el.innerHTML = '';
+    [...text].forEach((ch, i) => {
+      const span = document.createElement('span');
+      span.className = 'char';
+      span.textContent = ch === ' ' ? ' ' : ch;
+      const delay = baseDelay + i * 42;
+      span.style.animationDelay = delay + 'ms';
+      if(isGold){
+        // stagger the glow too
+        span.style.animationDelay = delay + 'ms, ' + (delay + 400) + 'ms';
+      }
+      el.appendChild(span);
+    });
+  }
+
+  // Line 1 starts at 350ms (matches fadeUp delay on hero-title)
+  buildChars(el1, line1Text, 350, false);
+  // Line 2 starts after line 1 finishes
+  const line2Delay = 350 + line1Text.length * 42 + 80;
+  buildChars(el2, line2Text, line2Delay, true);
+  // Force hl2 visible after last char animates in
+  const lastCharEnd = line2Delay + line2Text.length * 42 + 600;
+  setTimeout(() => { el2.style.opacity = '1'; }, lastCharEnd);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Compare All Models · GoldCast</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{--g1:#C9A84C;--g2:#E8C96A;--dark:#08080A;--d2:#0F0F14;--d3:#16161E;--d4:#1E1E28;--d5:#262632;--border:rgba(201,168,76,0.2);--border2:rgba(201,168,76,0.07);--text:#F0EDE6;--muted:#6B6578;--muted2:#9A9198;--green:#55C594;--red:#E05555}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Outfit',sans-serif;background:var(--dark);color:var(--text)}
+nav{position:sticky;top:0;z-index:100;padding:14px 40px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border2);backdrop-filter:blur(20px);background:rgba(8,8,10,0.9);flex-wrap:wrap;gap:10px}
+.nav-logo{display:flex;align-items:center;gap:8px;text-decoration:none}
+.nav-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--g1),var(--g2));border-radius:5px;display:grid;place-items:center;font-family:'Playfair Display',serif;font-weight:900;font-size:11px;color:#08080A}
+.nav-name{font-family:'Playfair Display',serif;font-size:16px;font-weight:700}
+.nav-actions{display:flex;gap:8px;flex-wrap:wrap}
+.nav-btn{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1px;text-decoration:none;border:1px solid var(--border2);padding:6px 12px;border-radius:6px;transition:all .2s;background:transparent;cursor:pointer;color:var(--muted2)}
+.nav-btn:hover{border-color:var(--border);color:var(--text)}
+
+/* Hero */
+.hero{padding:48px 40px;text-align:center;border-bottom:1px solid var(--border2);background:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(201,168,76,0.07),transparent)}
+.hero-eyebrow{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:12px}
+.hero-title{font-family:'Playfair Display',serif;font-size:clamp(32px,5vw,56px);font-weight:900;letter-spacing:-1.5px;margin-bottom:8px}
+.hero-title em{color:var(--g1);font-style:italic}
+.hero-sub{color:var(--muted2);font-size:14px}
+
+/* Consensus */
+.consensus-bar{display:flex;align-items:center;justify-content:center;gap:40px;padding:24px 40px;background:var(--d2);border-bottom:1px solid var(--border2);flex-wrap:wrap}
+.cons-item{text-align:center}
+.cons-val{font-family:'Playfair Display',serif;font-size:36px;font-weight:700;color:var(--g2)}
+.cons-label{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:4px}
+.cons-divider{width:1px;height:50px;background:var(--border2)}
+
+/* Main content */
+.container{max-width:1100px;margin:0 auto;padding:40px}
+.section{margin-bottom:52px}
+.sec-label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--g1);text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.sec-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+.sec-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;margin-bottom:20px}
+.sec-title em{color:var(--g1);font-style:italic}
+
+/* Model result cards */
+.results-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:24px}
+.res-card{background:var(--d2);border:1px solid var(--border2);border-radius:12px;padding:24px;transition:all .3s;position:relative;overflow:hidden}
+.res-card.best-card{border-color:rgba(201,168,76,0.4)}
+.res-card.best-card::before{content:'BEST';position:absolute;top:12px;right:12px;font-family:'Space Mono',monospace;font-size:8px;letter-spacing:2px;background:var(--g1);color:var(--dark);padding:2px 8px;border-radius:3px}
+.res-card:hover{transform:translateY(-2px);border-color:rgba(201,168,76,0.3)}
+.res-model{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--g1);text-transform:uppercase;margin-bottom:8px}
+.res-price{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--text);margin-bottom:4px}
+.res-unit{font-size:10px;color:var(--muted)}
+.res-bar-track{height:3px;background:var(--d4);border-radius:2px;margin:12px 0 4px;overflow:hidden}
+.res-bar-fill{height:100%;background:linear-gradient(90deg,var(--g1),var(--g2));border-radius:2px;transition:width 1s cubic-bezier(.23,1,.32,1)}
+.res-vs-avg{font-family:'Space Mono',monospace;font-size:10px}
+.pos{color:var(--green)}.neg{color:var(--red)}
+
+/* Charts */
+.chart-box{background:var(--d2);border:1px solid var(--border2);border-radius:14px;padding:24px;margin-bottom:16px}
+.chart-title{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:16px}
+.charts-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:768px){.charts-2col{grid-template-columns:1fr}}
+
+/* Backtest comparison */
+.bt-model-section{margin-bottom:40px}
+.bt-model-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.bt-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.bt-model-name{font-family:'Playfair Display',serif;font-size:18px;font-weight:700}
+.bt-model-badge{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1px;padding:3px 8px;border-radius:3px;background:rgba(201,168,76,0.1);color:var(--g1)}
+
+/* Bottom nav */
+.bottom-nav{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding:32px 40px;border-top:1px solid var(--border2)}
+.bnav-btn{display:inline-flex;align-items:center;gap:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;text-decoration:none;padding:12px 22px;border-radius:8px;border:1px solid var(--border2);color:var(--muted2);transition:all .2s;cursor:pointer;background:transparent}
+.bnav-btn:hover{border-color:var(--border);color:var(--text)}
+.bnav-btn.primary{background:linear-gradient(135deg,var(--g1),var(--g2));color:var(--dark);border-color:transparent;font-weight:600}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">
+    <div class="nav-icon">Au</div>
+    <div class="nav-name">GoldCast</div>
+  </a>
+  <div class="nav-actions">
+    <a href="/" class="nav-btn">← All Models</a>
+    <button onclick="window.print()" class="nav-btn">⎙ Save</button>
+  </div>
+</nav>
+
+{% set vals = results.values()|list %}
+{% set valid_vals = vals|select|list %}
+{% if avg is defined and avg %}
+{% set consensus_avg = avg %}
+{% elif valid_vals %}
+{% set consensus_avg = (valid_vals|sum) / (valid_vals|length) %}
+{% else %}
+{% set consensus_avg = 0 %}
+{% endif %}
+{% set mn = valid_vals|min if valid_vals else 0 %}
+{% set mx = valid_vals|max if valid_vals else 0 %}
+{% set spread_val = mx - mn if valid_vals else 0 %}
+
+<div class="hero">
+  <div class="hero-eyebrow">All 5 Models · Same Input Data</div>
+  <h1 class="hero-title">Model <em>Comparison</em> Report</h1>
+  <p class="hero-sub">Side-by-side predictions from all models with backtesting analysis.</p>
+</div>
+
+<div class="consensus-bar">
+  <div class="cons-item"><div class="cons-val">${{ "{:,.2f}".format(consensus_avg) }}</div><div class="cons-label">Consensus Avg{% if tree_reliable is defined and not tree_reliable %} (Linear){% endif %}</div></div>
+  <div class="cons-divider"></div>
+  <div class="cons-item"><div class="cons-val">${{ "{:,.2f}".format(mn) }}</div><div class="cons-label">Lowest</div></div>
+  <div class="cons-divider"></div>
+  <div class="cons-item"><div class="cons-val">${{ "{:,.2f}".format(mx) }}</div><div class="cons-label">Highest</div></div>
+  <div class="cons-divider"></div>
+  <div class="cons-item"><div class="cons-val">${{ "{:,.2f}".format(spread_val) }}</div><div class="cons-label">Spread</div></div>
+  <div class="cons-divider"></div>
+  <div class="cons-item"><div class="cons-val">{{ valid_vals|length }}</div><div class="cons-label">Models Run</div></div>
+</div>
+
+<div class="container">
+
+  <!-- RESULT CARDS -->
+  <div class="section">
+    <div class="sec-label">Predictions</div>
+    <h2 class="sec-title">All Model <em>Predictions</em></h2>
+
+    {% if tree_reliable is defined and not tree_reliable %}
+    <div style="background:rgba(224,123,58,0.1);border:1px solid rgba(224,123,58,0.3);border-radius:10px;padding:14px 20px;margin-bottom:20px;display:flex;gap:12px;align-items:flex-start">
+      <span style="font-size:18px;flex-shrink:0">⚠️</span>
+      <div style="font-size:13px;color:#E07B3A;line-height:1.8">
+        <strong style="color:#F0EDE6;display:block;margin-bottom:4px">Tree Model Extrapolation Warning</strong>
+        Gold Price input (${{ "{:,.0f}".format(gold_price_input) }}) is above Tree model training range (~$2,600).
+        XGBoost and LightGBM predictions will be significantly understated — they cannot extrapolate above their training maximum.
+        Rely on <strong>Lasso + PCA</strong> and <strong>Ridge + PCA</strong> for accurate current-price forecasts.
+        The Consensus Average above excludes Tree models in this scenario.
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="results-grid">
+      {% for key, val in results.items() %}
+      {% set m = models[key] %}
+      {% set ext_warn = extrapolation_warnings[key] if extrapolation_warnings is defined and key in extrapolation_warnings else false %}
+      <div class="res-card {% if m.rank == 1 %}best-card{% endif %}" {% if ext_warn %}style="border-color:rgba(224,123,58,0.4)"{% endif %}>
+        <div class="res-model">{{ m.icon }} {{ m.name }}</div>
+        <div class="res-price">{{ "$" + "{:,.2f}".format(val) if val else 'Error' }}</div>
+        <div class="res-unit">USD per troy ounce</div>
+        {% if ext_warn %}
+        <div style="margin-top:10px;background:rgba(224,82,82,0.1);border:1px solid rgba(224,82,82,0.35);border-radius:6px;padding:6px 10px;font-size:9px;line-height:1.7">
+          <strong style="font-family:'Space Mono',monospace;color:#E05050;letter-spacing:0.5px">⚠ EXTRAPOLATION ERROR</strong><br>
+          <span style="color:#C87070">
+          {% if model_warnings is defined and key in model_warnings %}
+            {{ model_warnings[key] }}
+          {% else %}
+            Tree model trained up to ~$2,600. Prediction severely understated at ${{ "{:,.0f}".format(gold_price_input) if gold_price_input is defined else "current" }}. Rely on Lasso+PCA / Ridge+PCA.
+          {% endif %}
+          </span>
+        </div>
+        {% endif %}
+        {% if val %}
+        <div class="res-bar-track"><div class="res-bar-fill" data-w="{{ [((val - mn) / (spread_val + 0.01) * 100)|int, 5]|max }}"></div></div>
+        {% set diff = val - consensus_avg %}
+        <div class="res-vs-avg {% if diff > 0 %}pos{% else %}neg{% endif %}">
+          {{ "{:+,.2f}".format(diff) }} vs avg{% if tree_reliable is defined and not tree_reliable %} (linear consensus){% endif %}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="section">
+    <div class="sec-label">Visual Comparison</div>
+    <h2 class="sec-title">Predictions <em>at a Glance</em></h2>
+    <div class="charts-2col">
+      <div class="chart-box">
+        <div class="chart-title">Prediction by Model</div>
+        <canvas id="barChart" height="200"></canvas>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">R² Score by Model</div>
+        <canvas id="r2Chart" height="200"></canvas>
+      </div>
+    </div>
+    <div class="chart-box">
+      <div class="chart-title">All Models — Historical Backtest Overlay</div>
+      <canvas id="overlapChart" height="120"></canvas>
+    </div>
+  </div>
+
+  <!-- BACKTEST PER MODEL -->
+  <div class="section">
+    <div class="sec-label">Backtesting</div>
+    <h2 class="sec-title">Per-Model <em>Backtest</em> Analysis</h2>
+    <div style="background:rgba(224,123,58,0.08);border:1px solid rgba(224,123,58,0.25);border-radius:8px;padding:12px 18px;margin-bottom:24px;display:flex;gap:12px;align-items:flex-start">
+      <span style="font-size:16px;flex-shrink:0">ℹ</span>
+      <div style="font-size:12px;color:#C8A06A;line-height:1.7">
+        <strong style="color:var(--text);display:block;margin-bottom:3px">Illustrative Simulation — January 2025 Data</strong>
+        These charts show how each model would have performed on 20 trading days in January 2025 (gold ~$2,310–$2,515).
+        Macro indicators (DXY, Silver, etc.) are fixed at May 2025 defaults — only Gold_Price varies. This is <em>not</em> a true historical backtest.
+      </div>
+    </div>
+    {% for key, bt in backtest.items() %}
+    {% set m = models[key] %}
+    <div class="bt-model-section">
+      <div class="bt-model-header">
+        <div class="bt-dot" style="background:{{ m.color }}"></div>
+        <div class="bt-model-name">{{ m.name }}</div>
+        <div class="bt-model-badge">Rank #{{ m.rank }} · R²={{ "%.4f"|format(m.r2) }}</div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Actual vs Predicted — {{ m.name }}</div>
+        <canvas id="bt_{{ key }}" height="100"></canvas>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- MODEL METRICS TABLE -->
+  <div class="section">
+    <div class="sec-label">Performance Summary</div>
+    <h2 class="sec-title">Complete <em>Metrics Table</em></h2>
+    <div style="background:var(--d2);border:1px solid var(--border2);border-radius:14px;overflow:hidden">
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr;padding:14px 20px;background:var(--d3);border-bottom:1px solid var(--border2)">
+        {% for h in ['Model','Prediction','R²','RMSE','MAE','Rank'] %}
+        <div style="font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase">{{ h }}</div>
+        {% endfor %}
+      </div>
+      {% for key, m in models.items() %}
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr;padding:14px 20px;border-bottom:1px solid var(--border2);align-items:center;transition:background .2s" onmouseover="this.style.background='var(--d3)'" onmouseout="this.style.background='transparent'">
+        <div style="font-weight:600;font-size:13px">{{ m.name }}</div>
+        <div style="font-family:'Space Mono',monospace;font-size:12px;color:var(--g2)">${{ "{:,.2f}".format(results.get(key, 0)) if results.get(key) else 'N/A' }}</div>
+        <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--green)">{{ "%.4f"|format(m.r2) }}</div>
+        <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted2)">${{ m.rmse }}</div>
+        <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted2)">${{ m.mae }}</div>
+        <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--g1)">#{{ m.rank }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <a href="/" class="bnav-btn primary">🏠 Back to Models</a>
+  {% for key, m in models.items() %}
+  <a href="/input/{{ key }}" class="bnav-btn">{{ m.icon }} {{ m.name }}</a>
+  {% endfor %}
+</div>
+
+<script>
+const gold='#C9A84C',gold2='#E8C96A',muted='#6B6578';
+const modelColors = {'ridge_pca':'#C9A84C','lasso_pca':'#E8C96A','ridge_gold':'#A0916E','lightgbm':'#7A8A6E','xgboost':'#6E7A8A'};
+const cd = {plugins:{legend:{labels:{color:muted,font:{family:'Space Mono',size:9}}}},scales:{x:{ticks:{color:muted,font:{size:9}},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:muted,font:{size:9}},grid:{color:'rgba(255,255,255,0.04)'}}}};
+
+const results = {{ results|tojson }};
+const models  = {{ models|tojson }};
+
+// Bar chart
+new Chart(document.getElementById('barChart'),{
+  type:'bar',
+  data:{
+    labels:Object.values(models).map(m=>m.name),
+    datasets:[{label:'Predicted Price ($)',data:Object.keys(models).map(k=>results[k]||0),backgroundColor:Object.keys(models).map(k=>modelColors[k]+'BB'),borderRadius:6,borderSkipped:false}]
+  },
+  options:{...cd,plugins:{...cd.plugins,tooltip:{callbacks:{label:c=>' $'+c.raw.toLocaleString()}}}}
+});
+
+// R² chart
+new Chart(document.getElementById('r2Chart'),{
+  type:'bar',
+  data:{
+    labels:Object.values(models).map(m=>m.name),
+    datasets:[{label:'R² Score',data:Object.values(models).map(m=>m.r2),backgroundColor:Object.keys(models).map(k=>modelColors[k]+'BB'),borderRadius:6,borderSkipped:false}]
+  },
+  options:{...cd,scales:{...cd.scales,y:{...cd.scales.y,min:0.99}}}
+});
+
+// Overlap backtest
+const bts = {{ backtest|tojson }};
+const dates = Object.values(bts)[0]?.dates || [];
+new Chart(document.getElementById('overlapChart'),{
+  type:'line',
+  data:{
+    labels:dates,
+    datasets:[
+      {label:'Actual',data:Object.values(bts)[0]?.actual||[],borderColor:'rgba(255,255,255,0.5)',borderWidth:2,pointRadius:2,tension:0.3,borderDash:[]},
+      ...Object.entries(bts).map(([k,bt])=>({
+        label:models[k]?.name||k,
+        data:bt.predicted,
+        borderColor:modelColors[k]||gold,
+        borderWidth:1.5,
+        pointRadius:0,
+        tension:0.3,
+        borderDash:[],
+      }))
+    ]
+  },
+  options:{...cd,plugins:{...cd.plugins,tooltip:{mode:'index',intersect:false}}}
+});
+
+// Per-model backtest charts
+Object.entries(bts).forEach(([key,bt])=>{
+  const canvas = document.getElementById('bt_'+key);
+  if(!canvas) return;
+  new Chart(canvas,{
+    type:'line',
+    data:{
+      labels:bt.dates,
+      datasets:[
+        {label:'Actual',data:bt.actual,borderColor:'rgba(255,255,255,0.6)',borderWidth:2,pointRadius:2,tension:0.3},
+        {label:'Predicted',data:bt.predicted,borderColor:modelColors[key]||gold,borderWidth:2,pointRadius:2,tension:0.3,borderDash:[4,4]}
+      ]
+    },
+    options:{...cd,plugins:{...cd.plugins,tooltip:{mode:'index',intersect:false}}}
+  });
+});
+
+// Animate bar fills
+document.querySelectorAll('.res-bar-fill').forEach(b=>{
+  setTimeout(()=>b.style.width=b.dataset.w+'%',300);
+});
+</script>
+</body>
+</html>
